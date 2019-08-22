@@ -17,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
 // classes needed to initialize map
+import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -64,8 +65,7 @@ import android.util.Log;
 
 // classes needed to launch navigation UI
 import android.view.View;
-import android.widget.Button;
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
+
 
 
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener {
@@ -80,10 +80,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static final String TAG = "DirectionsActivity";
     private NavigationMapRoute navigationMapRoute;
     // variables needed to initialize navigation
-    private Button button;
-    private FloatingActionButton searchLocationFab;
+    private MaterialSearchBar originSearchBar;
+    private MaterialSearchBar destinationSearchBar;
+    int clickedSearchBarId;
 
-    private int[] colorArr = new int[]{Color.BLUE, Color.GREEN, Color.RED};
+
+    private int[] colorArr = new int[]{Color.YELLOW, Color.GREEN, Color.RED};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
 
     @Override
@@ -107,38 +109,41 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 addDestinationIconSymbolLayer(style);
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
-                //Navigation button initialisation
-                button = findViewById(R.id.startButton);
-                button.setOnClickListener(new View.OnClickListener() {
+
+                originSearchBar = findViewById(R.id.origin_search_bar);
+                originSearchBar.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        boolean simulateRoute = true;
-                        NavigationLauncherOptions options = NavigationLauncherOptions.builder()
-                                .directionsRoute(currentRoute)
-                                .shouldSimulateRoute(simulateRoute)
-                                .build();
-                        // Call this method with Context from within an Activity
-                        NavigationLauncher.startNavigation(MapActivity.this, options);
+                        clickedSearchBarId = v.getId();
+                        redirectToSearchScreen();
                     }
                 });
-                //Search location FAB initialisation
-                searchLocationFab = findViewById(R.id.search_location_fab);
-                searchLocationFab.setOnClickListener(new View.OnClickListener() {
+
+                destinationSearchBar = findViewById(R.id.destination_search_bar);
+                destinationSearchBar.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Intent intent = new PlaceAutocomplete.IntentBuilder()
-                                .accessToken(Mapbox.getAccessToken())
-                                .placeOptions(PlaceOptions.builder()
-                                        .backgroundColor(Color.WHITE)
-                                        .limit(5)
-                                        .country("AU")
-                                        .build(PlaceOptions.MODE_CARDS))
-                                .build(MapActivity.this);
-                        startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
+                        clickedSearchBarId = v.getId();
+                        redirectToSearchScreen();
                     }
                 });
             }
         });
+    }
+
+
+
+
+    private void redirectToSearchScreen(){
+        Intent intent = new PlaceAutocomplete.IntentBuilder()
+                .accessToken(Mapbox.getAccessToken())
+                .placeOptions(PlaceOptions.builder()
+                        .backgroundColor(Color.WHITE)
+                        .limit(5)
+                        .country("AU")
+                        .build(PlaceOptions.MODE_CARDS))
+                .build(MapActivity.this);
+        startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
     }
 
     /**
@@ -153,23 +158,31 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (resultCode == Activity.RESULT_OK && requestCode == REQUEST_CODE_AUTOCOMPLETE) {
             CarmenFeature selectedLocationCarmenFeature = PlaceAutocomplete.getPlace(data);
 
-            Point destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
-            Point originPoint = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
-                    locationComponent.getLastKnownLocation().getLatitude());
+            if (clickedSearchBarId == R.id.destination_search_bar) {
+                destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
+                destinationSearchBar.setPlaceHolderColor(R.color.searchBarResultPlaceHolderColor);
 
-            GeoJsonSource source = mapboxMap.getStyle().getSourceAs("destination-source-id");
-            if (source != null) {
-                source.setGeoJson(Feature.fromGeometry(destinationPoint));
+                Point destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
+                Point originPoint = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
+                        locationComponent.getLastKnownLocation().getLatitude());
+
+                GeoJsonSource source = mapboxMap.getStyle().getSourceAs("destination-source-id");
+                if (source != null) {
+                    source.setGeoJson(Feature.fromGeometry(destinationPoint));
+                }
+
+                getRoute(originPoint, destinationPoint);
+            } else if (clickedSearchBarId == R.id.origin_search_bar) {
+                originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
+                originSearchBar.setPlaceHolderColor(R.color.searchBarResultPlaceHolderColor);
             }
-
-            getRoute(originPoint, destinationPoint);
-
-            button.setEnabled(true);
-            button.setBackgroundResource(R.color.mapboxBlue);
-
         }
     }
 
+    /**
+     * Add the destination icon symbol
+     * @param loadedMapStyle
+     */
     private void addDestinationIconSymbolLayer(@NonNull Style loadedMapStyle) {
         loadedMapStyle.addImage("destination-icon-id",
                 BitmapFactory.decodeResource(this.getResources(), R.drawable.mapbox_marker_icon_default));

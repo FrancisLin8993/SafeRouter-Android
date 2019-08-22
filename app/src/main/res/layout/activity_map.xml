@@ -10,34 +10,33 @@
         android:layout_height="match_parent"
         mapbox:mapbox_cameraZoom="14" />
 
-    <Button
-        android:id="@+id/startButton"
-        android:layout_width="fill_parent"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:background="@color/mapboxGrayLight"
-        android:enabled="false"
-        android:visibility="gone"
-        android:text="Start navigation"
-        android:textColor="@color/mapboxWhite"
+        android:orientation="vertical"
         mapbox:layout_constraintStart_toStartOf="parent"
-        mapbox:layout_constraintTop_toTopOf="parent" />
+        mapbox:layout_constraintTop_toTopOf="parent">
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/search_location_fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:layout_marginBottom="20dp"
-        android:layout_marginRight="20dp"
-        android:layout_marginEnd="20dp"
-        android:src="@android:drawable/ic_menu_search"
-        mapbox:backgroundTint="@color/colorPrimary"
-        mapbox:elevation="5dp"
-        mapbox:layout_constraintBottom_toBottomOf="parent"
-        mapbox:layout_constraintEnd_toEndOf="parent"
-        />
+        <com.mancj.materialsearchbar.MaterialSearchBar
+            android:id="@+id/origin_search_bar"
+            style="@style/MaterialSearchBarLight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            android:padding="16dp"
+            mapbox:mt_speechMode="false"
+            mapbox:mt_placeholder="Your current location"/>
+
+        <com.mancj.materialsearchbar.MaterialSearchBar
+            android:id="@+id/destination_search_bar"
+            style="@style/MaterialSearchBarLight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            mapbox:mt_speechMode="false"
+            mapbox:mt_placeholder="Search for destination"/>
+
+    </LinearLayout>
 </android.support.constraint.ConstraintLayout>

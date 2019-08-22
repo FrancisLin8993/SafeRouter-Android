@@ -10,5 +10,7 @@
     <color name="mapboxYellow">#d9d838</color>
     <color name="mapboxRed">#b43b71</color>
     <color name="transparent">#00FFFFFF</color>
+    <color name="searchBarDefaultPlaceHolderColor">#8aFFFFFF</color>
+    <color name="searchBarResultPlaceHolderColor">#000000</color>
 </resources>
 
