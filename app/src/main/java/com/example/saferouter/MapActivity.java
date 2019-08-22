@@ -12,12 +12,13 @@ import java.util.Random;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
 // classes needed to initialize map
 import com.mancj.materialsearchbar.MaterialSearchBar;
+import com.mapbox.api.directions.v5.DirectionsCriteria;
+import com.mapbox.api.directions.v5.models.RouteOptions;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -40,6 +41,7 @@ import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.PlaceAutocomplete;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
+import com.mapbox.mapboxsdk.style.layers.Layer;
 import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
@@ -53,6 +55,7 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineJoin;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
 // classes to calculate a route
+import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
@@ -171,6 +174,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     source.setGeoJson(Feature.fromGeometry(destinationPoint));
                 }
 
+                removeLayersAndResource();
                 getRoute(originPoint, destinationPoint);
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
@@ -246,7 +250,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         }
                         navigationMapRoute.addRoute(currentRoute);*/
 
+                        //Collect the coordinates on the route
                         List<Point> points = getPointsOfRoutes(currentRoute);
+
+
+                        //Draw the polyline section by section
                         for (int i = 0; i <= points.size() -2; i++){
                             int colorIndex = new Random().nextInt(colorArr.length);
                             //int color = R.color.colorPrimary;
@@ -271,6 +279,26 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return points;
     }
 
+    private void removeLayersAndResource(){
+        if (mapboxMap != null){
+            mapboxMap.getStyle(style -> {
+                String layerId;
+                List<Layer> layers = style.getLayers();
+                for (Layer layer: layers){
+                    layerId = layer.getId();
+                    if (layerId.contains("add-line-layer"))
+                        style.removeLayer(layer.getId());
+                }
+
+                List<Source> sources = style.getSources();
+                for (Source source: sources){
+                    if (source.getId().contains("add-line-resource"))
+                        style.removeSource(source.getId());
+                }
+            });
+        }
+    }
+
     private void drawOneLegOfRoute(Point origin, Point destination, int color){
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(origin);
@@ -281,11 +309,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 LineString lineString = LineString.fromLngLats(coordinates);
                 FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
-                String lineSourceID = "line-source-" + coordinates.toString() + UUID.randomUUID().toString();
+                String lineSourceID = "add-line-source-" + coordinates.toString() + UUID.randomUUID().toString();
                 GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
 
                 style.addSource(geoJsonSource);
-                String lineLayerID = "line-layer-" + coordinates.toString();
+                String lineLayerID = "add-line-layer-" + coordinates.toString();
                 LineLayer lineLayer = new LineLayer(lineLayerID, lineSourceID);
                 style.addLayer(lineLayer.withProperties(
                         lineCap(Property.LINE_CAP_ROUND),
