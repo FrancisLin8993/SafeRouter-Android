@@ -18,6 +18,9 @@ import android.widget.Toast;
 // classes needed to initialize map
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
+import com.mapbox.api.directions.v5.MapboxDirections;
+import com.mapbox.api.directions.v5.models.LegStep;
+import com.mapbox.api.directions.v5.models.RouteLeg;
 import com.mapbox.api.directions.v5.models.RouteOptions;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
@@ -86,6 +89,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private MaterialSearchBar originSearchBar;
     private MaterialSearchBar destinationSearchBar;
     int clickedSearchBarId;
+    private MapboxDirections client;
 
 
     private int[] colorArr = new int[]{Color.YELLOW, Color.GREEN, Color.RED};
@@ -175,7 +179,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
 
                 removeLayersAndResource();
-                getRoute(originPoint, destinationPoint);
+                //getRoute(originPoint, destinationPoint);
+                getSimplifiedRoute(originPoint, destinationPoint);
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
                 originSearchBar.setPlaceHolderColor(R.color.searchBarResultPlaceHolderColor);
@@ -242,6 +247,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                         currentRoute = response.body().routes().get(0);
 
+                        //List<Point> point = new ArrayList<>();
+
+                        List<RouteLeg> routeLegs = currentRoute.legs();
+
+                        List<LegStep> legSteps = routeLegs.get(0).steps();
+
+                        /*for (LegStep step : legSteps){
+                            point.add(step.maneuver().location());
+                        }*/
+
                         // Draw the route on the map
                         /*if (navigationMapRoute != null) {
                             navigationMapRoute.removeRoute();
@@ -269,16 +284,62 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 });
     }
 
+
+    private void getSimplifiedRoute(Point origin, Point destination){
+        client = MapboxDirections.builder()
+                .origin(origin)
+                .destination(destination)
+                .overview(DirectionsCriteria.OVERVIEW_SIMPLIFIED)
+                .profile(DirectionsCriteria.PROFILE_DRIVING)
+                .accessToken(getString(R.string.access_token))
+                .build();
+
+        client.enqueueCall(new Callback<DirectionsResponse>() {
+            @Override
+            public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                Log.d(TAG, "Response code: " + response.code());
+                if (response.body() == null) {
+                    Log.e(TAG, "No routes found, make sure you set the right user and access token.");
+                    return;
+                } else if (response.body().routes().size() < 1) {
+                    Log.e(TAG, "No routes found");
+                    return;
+                }
+
+                currentRoute = response.body().routes().get(0);
+
+                //Collect the coordinates on the route
+                List<Point> points = getPointsOfRoutes(currentRoute);
+
+
+                //Draw the polyline section by section
+                for (int i = 0; i <= points.size() -2; i++){
+                    int colorIndex = new Random().nextInt(colorArr.length);
+                    //int color = R.color.colorPrimary;
+                    drawOneLegOfRoute(points.get(i), points.get(i + 1), colorArr[colorIndex]);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DirectionsResponse> call, Throwable t) {
+                Log.e(TAG, "Error: " + t.getMessage());
+            }
+        });
+    }
+
     private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute){
         List<Point> points = new ArrayList<>();
         if (directionsRoute != null){
             String encodedPolyline = directionsRoute.geometry();
-            //points = PolylineUtils.decode(encodedPolyline, 6);
-            points = PolylineUtils.decode("hvdfFuehtZkA|E{C|XiBxE{DtEmFgAcwAsO", 5);
+            points = PolylineUtils.decode(encodedPolyline, 6);
+            //points = PolylineUtils.decode("hvdfFuehtZkA|E{C|XiBxE{DtEmFgAcwAsO", 5);
         }
         return points;
     }
 
+    /**
+     * Remove line layers and sources
+     */
     private void removeLayersAndResource(){
         if (mapboxMap != null){
             mapboxMap.getStyle(style -> {
