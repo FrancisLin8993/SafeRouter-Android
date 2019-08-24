@@ -11,4 +11,5 @@
     <string name="colour_info">colour info</string>
     <string name="clear_all">Clear All</string>
     <string name="route_colour_information">Route Colour Information</string>
+    <string name="new_location">EXPLANATION_HERE</string>
 </resources>
