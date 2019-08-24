@@ -10,6 +10,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,9 +76,17 @@ import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
+
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
+
 import android.util.Log;
 
 // classes needed to launch navigation UI
@@ -94,8 +103,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private LocationComponent locationComponent;
     // variables for calculating and drawing a route
     private DirectionsRoute currentRoute;
+    private String safetyLevelResponseString;
     private static final String TAG = "DirectionsActivity";
     private NavigationMapRoute navigationMapRoute;
+    private List<Point> pointsOfRoute;
     // variables needed to initialize navigation
     private MaterialSearchBar originSearchBar;
     private MaterialSearchBar destinationSearchBar;
@@ -261,67 +272,45 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return true;
     }
 
-    private void getRoute(Point origin, Point destination) {
-        NavigationRoute.builder(this)
-                .accessToken(Mapbox.getAccessToken())
-                .origin(origin)
-                .destination(destination)
-                .build()
-                .getRoute(new Callback<DirectionsResponse>() {
-                    @RequiresApi(api = Build.VERSION_CODES.M)
-                    @Override
-                    public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
-                        // You can get the generic HTTP info about the response
-                        Log.d(TAG, "Response code: " + response.code());
-                        if (response.body() == null) {
-                            Log.e(TAG, "No routes found, make sure you set the right user and access token.");
-                            return;
-                        } else if (response.body().routes().size() < 1) {
-                            Log.e(TAG, "No routes found");
-                            return;
-                        }
+    private void getSafetyLevel(String jsonString, Callback<ResponseBody> callback){
 
-                        currentRoute = response.body().routes().get(0);
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(SafetyLevelApiInterface.BASE_URL)
+                .build();
 
-                        //List<Point> point = new ArrayList<>();
+        SafetyLevelApiInterface service = retrofit.create(SafetyLevelApiInterface.class);
 
-                        List<RouteLeg> routeLegs = currentRoute.legs();
+        RequestBody body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonString);
+        Call<ResponseBody> responseBodyCall = service.getSafetyLevel(body);
 
-                        List<LegStep> legSteps = routeLegs.get(0).steps();
-
-                        /*for (LegStep step : legSteps){
-                            point.add(step.maneuver().location());
-                        }*/
-
-                        // Draw the route on the map
-                        /*if (navigationMapRoute != null) {
-                            navigationMapRoute.removeRoute();
-                        } else {
-                            navigationMapRoute = new NavigationMapRoute(null, mapView, mapboxMap, R.style.NavigationMapRoute);
-                        }
-                        navigationMapRoute.addRoute(currentRoute);*/
-
-                        //Collect the coordinates on the route
-                        List<Point> points = getPointsOfRoutes(currentRoute);
-
-
-                        //Draw the polyline section by section
-                        for (int i = 0; i <= points.size() -2; i++){
-                            int colorIndex = new Random().nextInt(colorArr.length);
-                            //int color = R.color.colorPrimary;
-                            drawOneLegOfRoute(points.get(i), points.get(i + 1), colorArr[colorIndex]);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<DirectionsResponse> call, Throwable throwable) {
-                        Log.e(TAG, "Error: " + throwable.getMessage());
-                    }
-                });
+        responseBodyCall.enqueue(callback);
     }
 
+    Callback<ResponseBody> safetyLevelCallback = new Callback<ResponseBody>() {
+        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
+        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+            Log.d(TAG, "Response code: " + response.code());
+            if (response.body() == null) {
+                Log.e(TAG, "No safety level found");
+                return;
+            }
+            try {
+                safetyLevelResponseString = response.body().string();
+                drawRoutePolyLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onFailure(Call<ResponseBody> call, Throwable t) {
+            Log.e(TAG, "Error: " + t.getMessage());
+        }
+    };
 
     private void getSimplifiedRoute(Point origin, Point destination){
+
         client = MapboxDirections.builder()
                 .origin(origin)
                 .destination(destination)
@@ -346,15 +335,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 currentRoute = response.body().routes().get(0);
 
                 //Collect the coordinates on the route
-                List<Point> points = getPointsOfRoutes(currentRoute);
+                pointsOfRoute = getPointsOfRoutes(currentRoute);
+                String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
+                getSafetyLevel(coordinatesString,safetyLevelCallback);
+                //drawRoutePolyLine();
 
-
-                //Draw the polyline section by section
-                for (int i = 0; i <= points.size() -2; i++){
-                    int colorIndex = new Random().nextInt(colorArr.length);
-                    //int color = R.color.colorPrimary;
-                    drawOneLegOfRoute(points.get(i), points.get(i + 1), colorArr[colorIndex]);
-                }
             }
 
             @Override
@@ -362,6 +347,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 Log.e(TAG, "Error: " + t.getMessage());
             }
         });
+    }
+
+    /**
+     * Draw the polyline section by section
+     */
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void drawRoutePolyLine(){
+        for (int i = 0; i <= pointsOfRoute.size() -2; i++){
+            int colorIndex = new Random().nextInt(colorArr.length);
+            //int color = R.color.colorPrimary;
+            drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colorArr[colorIndex]);
+        }
     }
 
     private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute){
