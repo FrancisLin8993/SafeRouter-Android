@@ -12,5 +12,8 @@
     <color name="transparent">#00FFFFFF</color>
     <color name="searchBarDefaultPlaceHolderColor">#8aFFFFFF</color>
     <color name="searchBarResultPlaceHolderColor">#000000</color>
+    <color name="routeGreen">#99c140</color>
+    <color name="routeYellow">#e7b416</color>
+    <color name="routeRed">#cc3232</color>
 </resources>
 

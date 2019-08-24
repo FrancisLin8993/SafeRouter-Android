@@ -3,4 +3,12 @@
     <string name="access_token" translatable="false">pk.eyJ1IjoiZmxpbjAwMDIiLCJhIjoiY2psdWQxdnk2MGl5bTNwbWV4ajUxZmlpMCJ9.0EQIwezJXuGd3REKsOBBYg</string>
     <string name="user_location_permission_explanation">This app needs location permissions to show its functionality.</string>
     <string name="user_location_permission_not_granted">You didn\'t grant location permissions.</string>
+    <string name="route_colours">Route Colours:</string>
+    <string name="dangerous">Red: Dangerous</string>
+    <string name="medium_level">Yellow: Medium</string>
+    <string name="safe_level">Green: Safe</string>
+    <string name="welcome_to_saferouter">Welcome to SafeRouter!</string>
+    <string name="colour_info">colour info</string>
+    <string name="clear_all">Clear All</string>
+    <string name="route_colour_information">Route Colour Information</string>
 </resources>

@@ -11,6 +11,7 @@
         mapbox:mapbox_cameraZoom="14" />
 
     <LinearLayout
+        android:id="@+id/searchbar_linear_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -39,4 +40,32 @@
             mapbox:mt_placeholder="Search for destination"/>
 
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/buttons_linear_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        mapbox:layout_constraintEnd_toEndOf="parent"
+        mapbox:layout_constraintBottom_toBottomOf="parent">
+
+        <Button
+            android:id="@+id/button_colour_info"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/colour_info"
+            />
+
+        <Button
+            android:id="@+id/button_clear"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/clear_all"
+            />
+
+    </LinearLayout>
+
+
 </android.support.constraint.ConstraintLayout>

@@ -1,9 +1,11 @@
 package com.example.saferouter;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 
 import java.util.ArrayList;
@@ -12,7 +14,9 @@ import java.util.Random;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
+import android.widget.Button;
 import android.widget.Toast;
 
 // classes needed to initialize map
@@ -21,7 +25,6 @@ import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.MapboxDirections;
 import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.directions.v5.models.RouteLeg;
-import com.mapbox.api.directions.v5.models.RouteOptions;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -59,7 +62,6 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
 // classes to calculate a route
 import com.mapbox.mapboxsdk.style.sources.Source;
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
@@ -88,11 +90,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     // variables needed to initialize navigation
     private MaterialSearchBar originSearchBar;
     private MaterialSearchBar destinationSearchBar;
-    int clickedSearchBarId;
+    private int clickedSearchBarId;
     private MapboxDirections client;
+    private Button colourInfoButton;
+    private Button clearAllButton;
 
 
-    private int[] colorArr = new int[]{Color.YELLOW, Color.GREEN, Color.RED};
+    private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
 
     @Override
@@ -132,6 +136,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     public void onClick(View v) {
                         clickedSearchBarId = v.getId();
                         redirectToSearchScreen();
+                    }
+                });
+
+                colourInfoButton = findViewById(R.id.button_colour_info);
+                colourInfoButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showColourInfoDialog();
+                    }
+                });
+
+                clearAllButton = findViewById(R.id.button_clear);
+                clearAllButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
                     }
                 });
             }
@@ -233,6 +253,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .destination(destination)
                 .build()
                 .getRoute(new Callback<DirectionsResponse>() {
+                    @RequiresApi(api = Build.VERSION_CODES.M)
                     @Override
                     public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
                         // You can get the generic HTTP info about the response
@@ -295,6 +316,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .build();
 
         client.enqueueCall(new Callback<DirectionsResponse>() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
                 Log.d(TAG, "Response code: " + response.code());
@@ -360,6 +382,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * Draw one section of route between two points.
+     * @param origin
+     * @param destination
+     * @param color
+     */
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void drawOneLegOfRoute(Point origin, Point destination, int color){
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(origin);
@@ -380,11 +409,24 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         lineCap(Property.LINE_CAP_ROUND),
                         lineJoin(Property.LINE_JOIN_ROUND),
                         lineWidth(8f),
-                        lineColor(color))
+                        lineColor(getColor(color)))
                 );
             });
         }
 
+    }
+
+    private void showColourInfoDialog(){
+        Dialog dialog = new Dialog(MapActivity.this);
+        dialog.setContentView(R.layout.dialog_view);
+        Button dialogButton = dialog.findViewById(R.id.buttonOk);
+        dialogButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
     }
 
     @SuppressWarnings( {"MissingPermission"})
