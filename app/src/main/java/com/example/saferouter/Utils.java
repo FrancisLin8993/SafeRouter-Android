@@ -23,7 +23,7 @@ public class Utils {
     public static String generateCoordinatesJsonString(List<Point> points){
         StringBuilder stringBuilder = new StringBuilder();
         //Does not need the last coordinate for calling safety level
-        points.remove(points.size() - 1);
+        //points.remove(points.size() - 1);
         stringBuilder.append("{");
         stringBuilder.append("\"data\":");
         stringBuilder.append("\"[[");

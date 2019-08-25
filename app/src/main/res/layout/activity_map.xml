@@ -37,7 +37,7 @@
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
             mapbox:mt_speechMode="false"
-            mapbox:mt_placeholder="Search for destination"/>
+            mapbox:mt_placeholder="@string/destination_init_holder"/>
 
     </LinearLayout>
 

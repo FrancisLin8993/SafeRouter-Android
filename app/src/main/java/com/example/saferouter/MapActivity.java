@@ -39,6 +39,8 @@ import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
 import com.mapbox.geojson.utils.PolylineUtils;
 import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.camera.CameraPosition;
+import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -114,6 +116,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private MapboxDirections client;
     private Button colourInfoButton;
     private Button clearAllButton;
+    private CameraPosition cameraPosition;
 
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
@@ -147,6 +150,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
 
+                cameraPosition = mapboxMap.getCameraPosition();
+
                 originSearchBar = findViewById(R.id.origin_search_bar);
                 originSearchBar.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -177,15 +182,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 clearAllButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        removeLayersAndResource();
+                        destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
+                        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
                     }
                 });
             }
         });
     }
-
-
-
 
     private void redirectToSearchScreen(){
         Intent intent = new PlaceAutocomplete.IntentBuilder()
@@ -213,7 +218,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             if (clickedSearchBarId == R.id.destination_search_bar) {
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
-                destinationSearchBar.setPlaceHolderColor(R.color.searchBarResultPlaceHolderColor);
 
                 Point destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
                 Point originPoint = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
@@ -338,7 +342,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 pointsOfRoute = getPointsOfRoutes(currentRoute);
                 String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
                 getSafetyLevel(coordinatesString,safetyLevelCallback);
-                //drawRoutePolyLine();
 
             }
 
