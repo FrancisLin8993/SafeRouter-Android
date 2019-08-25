@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -23,7 +24,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 import android.widget.Toast;
 
-// classes needed to initialize map
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
@@ -32,8 +32,6 @@ import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.MapboxDirections;
-import com.mapbox.api.directions.v5.models.LegStep;
-import com.mapbox.api.directions.v5.models.RouteLeg;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -41,19 +39,18 @@ import com.mapbox.geojson.utils.PolylineUtils;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
+import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 
-// classes needed to add the location component
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.location.LocationComponent;
 import com.mapbox.mapboxsdk.location.modes.CameraMode;
 
-// classes needed to add a marker
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -72,10 +69,7 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineColor;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineJoin;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
 
-// classes to calculate a route
 import com.mapbox.mapboxsdk.style.sources.Source;
-import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
-import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 
@@ -86,16 +80,14 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 import android.util.Log;
 
-// classes needed to launch navigation UI
 import android.view.View;
 
-
-
+/**
+ * Activity of the Mapbox related features.
+ */
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener {
     // variables for adding location layer
     private MapView mapView;
@@ -107,17 +99,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private DirectionsRoute currentRoute;
     private String safetyLevelResponseString;
     private static final String TAG = "DirectionsActivity";
-    private NavigationMapRoute navigationMapRoute;
     private List<Point> pointsOfRoute;
-    // variables needed to initialize navigation
     private MaterialSearchBar originSearchBar;
     private MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
-    private MapboxDirections client;
+    private MapboxDirections directionsRequestClient;
     private Button colourInfoButton;
     private Button clearAllButton;
-    private CameraPosition cameraPosition;
-
+    private CameraPosition currentCameraPosition;
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
@@ -150,8 +139,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
 
-                cameraPosition = mapboxMap.getCameraPosition();
+                currentCameraPosition = mapboxMap.getCameraPosition();
 
+                //Initialise search bars and buttons
                 originSearchBar = findViewById(R.id.origin_search_bar);
                 originSearchBar.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -180,11 +170,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 clearAllButton = findViewById(R.id.button_clear);
                 clearAllButton.setOnClickListener(new View.OnClickListener() {
+                    /**
+                     * Clear all displayed routes and move the camera back to user's location
+                     * @param v
+                     */
                     @Override
                     public void onClick(View v) {
                         removeLayersAndResource();
+                        originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
                         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
-                        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
 
                     }
                 });
@@ -192,6 +187,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         });
     }
 
+    /**
+     * Redirect to search location screen
+     */
     private void redirectToSearchScreen(){
         Intent intent = new PlaceAutocomplete.IntentBuilder()
                 .accessToken(Mapbox.getAccessToken())
@@ -202,6 +200,23 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         .build(PlaceOptions.MODE_CARDS))
                 .build(MapActivity.this);
         startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
+    }
+
+    /**
+     * Recenter the camera position and zoom level to display the whole route on the map.
+     */
+    private void recenterCameraAfterDisplayingRoute(){
+        if (mapboxMap != null){
+            LatLng startPoint = new LatLng(pointsOfRoute.get(0).latitude(), pointsOfRoute.get(0).longitude());
+            LatLng destination = new LatLng(pointsOfRoute.get(pointsOfRoute.size() - 1).latitude(), pointsOfRoute.get(pointsOfRoute.size() - 1).longitude());
+
+            LatLngBounds latLngBounds = new LatLngBounds.Builder()
+                    .include(startPoint)
+                    .include(destination)
+                    .build();
+
+            mapboxMap.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 200));
+        }
     }
 
     /**
@@ -229,11 +244,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
 
                 removeLayersAndResource();
-                //getRoute(originPoint, destinationPoint);
                 getSimplifiedRoute(originPoint, destinationPoint);
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
-                originSearchBar.setPlaceHolderColor(R.color.searchBarResultPlaceHolderColor);
             }
         }
     }
@@ -276,6 +289,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return true;
     }
 
+    /**
+     * Request for safety level numbers from external api.
+     * @param jsonString
+     * @param callback
+     */
     private void getSafetyLevel(String jsonString, Callback<ResponseBody> callback){
 
         Retrofit retrofit = new Retrofit.Builder()
@@ -301,7 +319,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             try {
                 safetyLevelResponseString = response.body().string();
-                drawRoutePolyLine();
+                List<String> safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
+                drawRoutePolyLine(safetyLevels);
+                recenterCameraAfterDisplayingRoute();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -313,9 +333,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     };
 
+    /**
+     * Get a route with simplified mode of overview from mapbox directions api
+     * @param origin
+     * @param destination
+     */
     private void getSimplifiedRoute(Point origin, Point destination){
 
-        client = MapboxDirections.builder()
+        directionsRequestClient = MapboxDirections.builder()
                 .origin(origin)
                 .destination(destination)
                 .overview(DirectionsCriteria.OVERVIEW_SIMPLIFIED)
@@ -323,7 +348,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .accessToken(getString(R.string.access_token))
                 .build();
 
-        client.enqueueCall(new Callback<DirectionsResponse>() {
+        directionsRequestClient.enqueueCall(new Callback<DirectionsResponse>() {
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
@@ -341,6 +366,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 //Collect the coordinates on the route
                 pointsOfRoute = getPointsOfRoutes(currentRoute);
                 String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
+
+                //Request for safety levels of different sections of the returned route.
                 getSafetyLevel(coordinatesString,safetyLevelCallback);
 
             }
@@ -356,20 +383,26 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * Draw the polyline section by section
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void drawRoutePolyLine(){
+    private void drawRoutePolyLine(List<String> safetyLevelList){
+        Map safetyLevelMap = Utils.getSafetyLevelColourMap();
         for (int i = 0; i <= pointsOfRoute.size() -2; i++){
-            int colorIndex = new Random().nextInt(colorArr.length);
-            //int color = R.color.colorPrimary;
-            drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colorArr[colorIndex]);
+            int colourOfSection = (int)safetyLevelMap.get(safetyLevelList.get(i));
+            drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
+            //int colorIndex = new Random().nextInt(colorArr.length);
+            //drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colorArr[colorIndex]);
         }
     }
 
+    /**
+     * Retrieve coordinates from the geometry attributes of the response route.
+      * @param directionsRoute
+     * @return
+     */
     private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute){
         List<Point> points = new ArrayList<>();
         if (directionsRoute != null){
             String encodedPolyline = directionsRoute.geometry();
             points = PolylineUtils.decode(encodedPolyline, 6);
-            //points = PolylineUtils.decode("hvdfFuehtZkA|E{C|XiBxE{DtEmFgAcwAsO", 5);
         }
         return points;
     }
@@ -418,7 +451,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
 
                 style.addSource(geoJsonSource);
-                String lineLayerID = "add-line-layer-" + coordinates.toString();
+                String lineLayerID = "add-line-layer-" + coordinates.toString() + UUID.randomUUID().toString();
                 LineLayer lineLayer = new LineLayer(lineLayerID, lineSourceID);
                 style.addLayer(lineLayer.withProperties(
                         lineCap(Property.LINE_CAP_ROUND),
@@ -431,6 +464,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
+    /**
+     * Display the dialog of colour information.
+     */
     private void showColourInfoDialog(){
         Dialog dialog = new Dialog(MapActivity.this);
         dialog.setContentView(R.layout.dialog_view);

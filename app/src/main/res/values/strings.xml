@@ -9,8 +9,9 @@
     <string name="safe_level">Green: Safe</string>
     <string name="welcome_to_saferouter">Welcome to SafeRouter!</string>
     <string name="colour_info">colour info</string>
-    <string name="clear_all">Clear All</string>
+    <string name="clear_route">Clear Route</string>
     <string name="route_colour_information">Route Colour Information</string>
     <string name="new_location">EXPLANATION_HERE</string>
+    <string name="origin_init_holder">Your current location</string>
     <string name="destination_init_holder">Search for destination</string>
 </resources>

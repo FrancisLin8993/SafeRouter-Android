@@ -37,4 +37,5 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-places-v8:0.9.0'
     implementation 'com.github.mancj:MaterialSearchBar:0.8.2'
     implementation 'com.squareup.retrofit2:converter-scalars:2.3.0'
+    implementation 'org.apache.commons:commons-lang3:3.9'
 }
