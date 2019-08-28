@@ -15,7 +15,9 @@ public class MapActivityTest {
     @Test
     public void generateCorrectCoordinatesJsonString(){
         List<Point> points = new ArrayList<>();
-
+        points.add(Point.fromLngLat(144.966597416688, -37.741313666549));
+        String jsonString = Utils.generateCoordinatesJsonString(points);
+        assertEquals("{\"data\":\"[[(144.966597416688,-37.741313666549)]]\"}", jsonString);
     }
 
     @Test
@@ -23,5 +25,13 @@ public class MapActivityTest {
         Point point = Point.fromLngLat(144.966597416688, -37.741313666549);
         String jsonString = generateJsonStringForOneCoordinates(point);
         assertEquals("(144.966597416688,-37.741313666549)", jsonString);
+    }
+
+    @Test
+    public void getCorrectSafetyLevels(){
+        String safetyLevelResponse = "[[3.0,1.0]]";
+        List<String> safetyLevelList = Utils.extractSafetyLevelFromResponseString(safetyLevelResponse);
+        assertEquals("3.0", safetyLevelList.get(0));
+
     }
 }
