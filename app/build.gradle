@@ -38,4 +38,5 @@ dependencies {
     implementation 'com.github.mancj:MaterialSearchBar:0.8.2'
     implementation 'com.squareup.retrofit2:converter-scalars:2.3.0'
     implementation 'org.apache.commons:commons-lang3:3.9'
+    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:4.8.0'
 }

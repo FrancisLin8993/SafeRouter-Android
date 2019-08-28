@@ -32,6 +32,8 @@ import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.MapboxDirections;
+import com.mapbox.api.directions.v5.models.LegStep;
+import com.mapbox.api.directions.v5.models.RouteLeg;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -107,6 +109,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Button colourInfoButton;
     private Button clearAllButton;
     private CameraPosition currentCameraPosition;
+    private Point originPoint;
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
@@ -136,10 +139,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 enableLocationComponent(style);
 
                 addDestinationIconSymbolLayer(style);
+                addOriginIconSymbolLayer(style);
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
+                originPoint = getCurrentLocation();
 
                 //Initialise search bars and buttons
                 originSearchBar = findViewById(R.id.origin_search_bar);
@@ -180,11 +185,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
                         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
                         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
-
+                        originPoint = getCurrentLocation();
                     }
                 });
             }
         });
+    }
+
+    private Point getCurrentLocation(){
+        return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
+                locationComponent.getLastKnownLocation().getLatitude());
     }
 
     /**
@@ -230,25 +240,36 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == Activity.RESULT_OK && requestCode == REQUEST_CODE_AUTOCOMPLETE) {
             CarmenFeature selectedLocationCarmenFeature = PlaceAutocomplete.getPlace(data);
+            Point destinationPoint;
 
             if (clickedSearchBarId == R.id.destination_search_bar) {
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
 
-                Point destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
-                Point originPoint = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
-                        locationComponent.getLastKnownLocation().getLatitude());
+                destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
 
-                GeoJsonSource source = mapboxMap.getStyle().getSourceAs("destination-source-id");
-                if (source != null) {
-                    source.setGeoJson(Feature.fromGeometry(destinationPoint));
-                }
+                renderRouteOnMap(originPoint, destinationPoint);
 
-                removeLayersAndResource();
-                getSimplifiedRoute(originPoint, destinationPoint);
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
+                originPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
             }
         }
+    }
+
+
+    private void renderRouteOnMap(Point originPoint, Point destination){
+        GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
+        if (destinationSource != null) {
+            destinationSource.setGeoJson(Feature.fromGeometry(destination));
+        }
+
+        GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
+        if (originSource != null && !originPoint.equals(getCurrentLocation())) {
+            originSource.setGeoJson(Feature.fromGeometry(originPoint));
+        }
+
+        removeLayersAndResource();
+        getSimplifiedRoute(originPoint, destination);
     }
 
     /**
@@ -267,6 +288,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 iconIgnorePlacement(true)
         );
         loadedMapStyle.addLayer(destinationSymbolLayer);
+    }
+
+    private void addOriginIconSymbolLayer(@NonNull Style loadedMapStyle) {
+        loadedMapStyle.addImage("origin-icon-id",
+                BitmapFactory.decodeResource(this.getResources(), R.drawable.mapbox_marker_icon_default));
+        GeoJsonSource geoJsonSource = new GeoJsonSource("origin-source-id");
+        loadedMapStyle.addSource(geoJsonSource);
+        SymbolLayer originSymbolLayer = new SymbolLayer("origin-symbol-layer-id", "origin-source-id");
+        originSymbolLayer.withProperties(
+                iconImage("origin-icon-id"),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true)
+        );
+        loadedMapStyle.addLayer(originSymbolLayer);
     }
 
     @SuppressWarnings( {"MissingPermission"})
