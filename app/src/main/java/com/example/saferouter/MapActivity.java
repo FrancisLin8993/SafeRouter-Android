@@ -247,7 +247,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
 
-                renderRouteOnMap(originPoint, destinationPoint);
+                if (destinationPoint.equals(originPoint))
+                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
+                else
+                    renderRouteOnMap(originPoint, destinationPoint);
 
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
@@ -402,9 +405,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 Log.d(TAG, "Response code: " + response.code());
                 if (response.body() == null) {
                     Log.e(TAG, "No routes found, make sure you set the right user and access token.");
+                    Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
                     return;
                 } else if (response.body().routes().size() < 1) {
                     Log.e(TAG, "No routes found");
+                    Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
                     return;
                 }
 
