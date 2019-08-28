@@ -252,21 +252,33 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
                 originPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
+                LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
+                CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
+                mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
+                showOriginPointMarker(originPoint);
             }
+        }
+    }
+
+    private void showDestinationMarker(Point destination){
+        GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
+        if (destinationSource != null) {
+            destinationSource.setGeoJson(Feature.fromGeometry(destination));
+        }
+    }
+
+    private void showOriginPointMarker(Point originPoint){
+        GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
+        if (originSource != null && !originPoint.equals(getCurrentLocation())) {
+            originSource.setGeoJson(Feature.fromGeometry(originPoint));
         }
     }
 
 
     private void renderRouteOnMap(Point originPoint, Point destination){
-        GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
-        if (destinationSource != null) {
-            destinationSource.setGeoJson(Feature.fromGeometry(destination));
-        }
 
-        GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
-        if (originSource != null && !originPoint.equals(getCurrentLocation())) {
-            originSource.setGeoJson(Feature.fromGeometry(originPoint));
-        }
+        showDestinationMarker(destination);
+        showOriginPointMarker(originPoint);
 
         removeLayersAndResource();
         getSimplifiedRoute(originPoint, destination);
