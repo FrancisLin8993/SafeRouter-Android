@@ -15,7 +15,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
@@ -68,6 +67,7 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineCap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineColor;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineJoin;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
 
 import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
@@ -184,6 +184,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
                         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
                         originPoint = getCurrentLocation();
+                        hideOriginMarker();
+                        hideDestinationMarker();
                     }
                 });
             }
@@ -256,33 +258,61 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
-                showOriginPointMarker(originPoint);
+                setOriginPointMarkerResource(originPoint);
+                if (!originPoint.equals(getCurrentLocation()))
+                    showOriginMarker();
             }
         }
     }
 
-    private void showDestinationMarker(Point destination){
+    private void setDestinationMarkerResource(Point destination){
         GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
         if (destinationSource != null) {
             destinationSource.setGeoJson(Feature.fromGeometry(destination));
         }
     }
 
-    private void showOriginPointMarker(Point originPoint){
+    private void setOriginPointMarkerResource(Point originPoint){
         GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
         if (originSource != null && !originPoint.equals(getCurrentLocation())) {
             originSource.setGeoJson(Feature.fromGeometry(originPoint));
         }
+
+    }
+
+    private void hideOriginMarker(){
+        Layer layer = mapboxMap.getStyle().getLayer("origin-symbol-layer-id");
+        if (layer != null)
+            layer.setProperties(visibility(Property.NONE));
+    }
+
+    private void showOriginMarker(){
+        Layer layer = mapboxMap.getStyle().getLayer("origin-symbol-layer-id");
+        if (layer != null)
+            layer.setProperties(visibility(Property.VISIBLE));
+    }
+
+    private void hideDestinationMarker(){
+        Layer layer = mapboxMap.getStyle().getLayer("destination-symbol-layer-id");
+        if (layer != null)
+            layer.setProperties(visibility(Property.NONE));
+    }
+
+    private void showDestinationMarker(){
+        Layer layer = mapboxMap.getStyle().getLayer("destination-symbol-layer-id");
+        if (layer != null)
+            layer.setProperties(visibility(Property.VISIBLE));
     }
 
 
     private void renderRouteOnMap(Point originPoint, Point destination){
 
-        showDestinationMarker(destination);
-        showOriginPointMarker(originPoint);
+        setDestinationMarkerResource(destination);
+        setOriginPointMarkerResource(originPoint);
 
         removeLayersAndResource();
         getSimplifiedRoute(originPoint, destination);
+        showDestinationMarker();
     }
 
     /**
@@ -363,6 +393,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             Log.d(TAG, "Response code: " + response.code());
             if (response.body() == null) {
                 Log.e(TAG, "No safety level found");
+                Toast.makeText(MapActivity.this, "No safety levels found", Toast.LENGTH_LONG).show();
                 return;
             }
             try {
@@ -378,6 +409,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             Log.e(TAG, "Error: " + t.getMessage());
+            Toast.makeText(MapActivity.this, "No safety levels found", Toast.LENGTH_LONG).show();
+
         }
     };
 
@@ -511,7 +544,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 );
             });
         }
-
     }
 
     /**
