@@ -186,8 +186,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
                         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
                         originPoint = getCurrentLocation();
-                        hideOriginMarker();
-                        hideDestinationMarker();
+                        hideMarker("origin-symbol-layer-id");
+                        hideMarker("destination-symbol-layer-id");
                     }
                 });
             }
@@ -261,7 +261,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
                 setOriginPointMarkerResource(originPoint);
                 if (!originPoint.equals(getCurrentLocation()))
-                    showOriginMarker();
+                    showMarker("origin-symbol-layer-id");
                 if (destinationPoint != null)
                     renderRouteOnMap(originPoint, destinationPoint);
             }
@@ -283,26 +283,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
-    private void hideOriginMarker(){
-        Layer layer = mapboxMap.getStyle().getLayer("origin-symbol-layer-id");
+    private void hideMarker(String layerId){
+        Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.NONE));
     }
 
-    private void showOriginMarker(){
-        Layer layer = mapboxMap.getStyle().getLayer("origin-symbol-layer-id");
-        if (layer != null)
-            layer.setProperties(visibility(Property.VISIBLE));
-    }
-
-    private void hideDestinationMarker(){
-        Layer layer = mapboxMap.getStyle().getLayer("destination-symbol-layer-id");
-        if (layer != null)
-            layer.setProperties(visibility(Property.NONE));
-    }
-
-    private void showDestinationMarker(){
-        Layer layer = mapboxMap.getStyle().getLayer("destination-symbol-layer-id");
+    private void showMarker(String layerId){
+        Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.VISIBLE));
     }
@@ -315,7 +303,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         removeLayersAndResource();
         getSimplifiedRoute(originPoint, destination);
-        showDestinationMarker();
+        showMarker("destination-symbol-layer-id");
     }
 
     /**
