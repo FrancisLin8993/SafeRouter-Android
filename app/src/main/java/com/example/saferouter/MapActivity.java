@@ -74,6 +74,9 @@ import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
@@ -99,14 +102,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     // variables for calculating and drawing a route
     private DirectionsRoute currentRoute;
     private String safetyLevelResponseString;
-    private static final String TAG = "DirectionsActivity";
+    private static final String TAG = "MapActivity";
     private List<Point> pointsOfRoute;
-    private MaterialSearchBar originSearchBar;
-    private MaterialSearchBar destinationSearchBar;
+    @BindView(R.id.origin_search_bar)
+    MaterialSearchBar originSearchBar;
+    @BindView(R.id.destination_search_bar)
+    MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
     private MapboxDirections directionsRequestClient;
-    private Button colourInfoButton;
-    private Button clearAllButton;
+    @BindView(R.id.button_colour_info)
+    Button colourInfoButton;
+    @BindView(R.id.button_clear)
+    Button clearAllButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -126,6 +133,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         Mapbox.getInstance(this, getString(R.string.access_token));
         setContentView(R.layout.activity_map);
+        ButterKnife.bind(this);
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
@@ -153,53 +161,40 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
-
-                //Initialise search bars and buttons
-                originSearchBar = findViewById(R.id.origin_search_bar);
-                originSearchBar.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        clickedSearchBarId = v.getId();
-                        redirectToSearchScreen();
-                    }
-                });
-
-                destinationSearchBar = findViewById(R.id.destination_search_bar);
-                destinationSearchBar.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        clickedSearchBarId = v.getId();
-                        redirectToSearchScreen();
-                    }
-                });
-
-                colourInfoButton = findViewById(R.id.button_colour_info);
-                colourInfoButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showColourInfoDialog();
-                    }
-                });
-
-                clearAllButton = findViewById(R.id.button_clear);
-                clearAllButton.setOnClickListener(new View.OnClickListener() {
-                    /**
-                     * Clear all displayed routes and move the camera back to user's location
-                     * @param v
-                     */
-                    @Override
-                    public void onClick(View v) {
-                        removeLayersAndResource();
-                        originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
-                        destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
-                        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
-                        originPoint = getCurrentLocation();
-                        hideMarker("origin-symbol-layer-id");
-                        hideMarker("destination-symbol-layer-id");
-                    }
-                });
             }
         });
+    }
+
+    @OnClick(R.id.origin_search_bar)
+    public void originSearchBarOnClick(View v){
+        clickedSearchBarId = v.getId();
+        redirectToSearchScreen();
+    }
+
+    @OnClick(R.id.destination_search_bar)
+    public void destinationSearchBarOnClick(View v){
+        clickedSearchBarId = v.getId();
+        redirectToSearchScreen();
+    }
+
+    @OnClick(R.id.button_colour_info)
+    public void colorButtonOnClick(){
+        showColourInfoDialog();
+    }
+
+    /**
+     * Clear all displayed routes and move the camera back to user's location
+     */
+    @OnClick(R.id.button_clear)
+    public void clearButtonOnClick(){
+        removeLayersAndResource();
+        originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
+        destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
+        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
+        originPoint = getCurrentLocation();
+        destinationPoint = null;
+        hideMarker("origin-symbol-layer-id");
+        hideMarker("destination-symbol-layer-id");
     }
 
     private Point getCurrentLocation(){
