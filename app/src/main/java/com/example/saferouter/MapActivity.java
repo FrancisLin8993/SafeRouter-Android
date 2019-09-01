@@ -110,6 +110,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
+    private LatLngBounds latLngBoundsMelbourne;
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
@@ -141,7 +142,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 addDestinationIconSymbolLayer(style);
                 addOriginIconSymbolLayer(style);
 
+                latLngBoundsMelbourne = new LatLngBounds.Builder()
+                        .include(new LatLng(-38.2250,145.5498))
+                        .include(new LatLng(-37.5401,144.5532))
+                        .build();
+
                 mapboxMap.addOnMapClickListener(MapActivity.this);
+                //Limit the camera inside the latitude and longitude bounds of Greater Melbourne.
+                mapboxMap.setLatLngBoundsForCameraTarget(latLngBoundsMelbourne);
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
@@ -209,6 +217,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         .backgroundColor(Color.WHITE)
                         .limit(5)
                         .country("AU")
+                        .bbox(144.5532, -38.2250, 145.5498, -37.5401)
                         .build(PlaceOptions.MODE_CARDS))
                 .build(MapActivity.this);
         startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
