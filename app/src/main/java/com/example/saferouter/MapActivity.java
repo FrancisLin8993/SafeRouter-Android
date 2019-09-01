@@ -15,6 +15,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
@@ -108,6 +109,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Button clearAllButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
+    private Point destinationPoint;
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
@@ -240,7 +242,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == Activity.RESULT_OK && requestCode == REQUEST_CODE_AUTOCOMPLETE) {
             CarmenFeature selectedLocationCarmenFeature = PlaceAutocomplete.getPlace(data);
-            Point destinationPoint;
 
             if (clickedSearchBarId == R.id.destination_search_bar) {
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
@@ -261,6 +262,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 setOriginPointMarkerResource(originPoint);
                 if (!originPoint.equals(getCurrentLocation()))
                     showOriginMarker();
+                if (destinationPoint != null)
+                    renderRouteOnMap(originPoint, destinationPoint);
             }
         }
     }
