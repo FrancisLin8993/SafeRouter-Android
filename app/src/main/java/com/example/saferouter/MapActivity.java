@@ -15,7 +15,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
@@ -127,6 +126,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
     // Variables needed to listen to location updates
     private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
+    private List<Feature> greenFeatureList = new ArrayList<>();
+    private List<Feature> yellowFeatureList = new ArrayList<>();
+    private List<Feature> redFeatureList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -306,7 +308,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         setOriginPointMarkerResource(originPoint);
 
         removeLayersAndResource();
-        getSimplifiedRoute(originPoint, destination);
+        getRouteFromMapbox(originPoint, destination);
         showMarker("destination-symbol-layer-id");
     }
 
@@ -414,12 +416,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param origin
      * @param destination
      */
-    private void getSimplifiedRoute(Point origin, Point destination){
+    private void getRouteFromMapbox(Point origin, Point destination){
 
         directionsRequestClient = MapboxDirections.builder()
                 .origin(origin)
                 .destination(destination)
-                .overview(DirectionsCriteria.OVERVIEW_SIMPLIFIED)
+                .overview(DirectionsCriteria.OVERVIEW_FULL)
                 .profile(DirectionsCriteria.PROFILE_DRIVING)
                 .accessToken(getString(R.string.access_token))
                 .build();
@@ -465,10 +467,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Map safetyLevelMap = Utils.getSafetyLevelColourMap();
         for (int i = 0; i <= pointsOfRoute.size() -2; i++){
             int colourOfSection = (int)safetyLevelMap.get(safetyLevelList.get(i));
-            drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
-            //int colorIndex = new Random().nextInt(colorArr.length);
-            //drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colorArr[colorIndex]);
+            //drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
+            addLegSourceOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
         }
+        addRouteLayer(R.color.routeGreen);
+        addRouteLayer(R.color.routeYellow);
+        addRouteLayer(R.color.routeRed);
     }
 
     /**
@@ -495,27 +499,45 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 List<Layer> layers = style.getLayers();
                 for (Layer layer: layers){
                     layerId = layer.getId();
-                    if (layerId.contains("add-line-layer"))
+                    if (layerId.contains("line-layer"))
                         style.removeLayer(layer.getId());
                 }
 
                 List<Source> sources = style.getSources();
                 for (Source source: sources){
-                    if (source.getId().contains("add-line-resource"))
+                    if (source.getId().contains("line-source"))
                         style.removeSource(source.getId());
                 }
+            });
+            removeAllFeatures();
+        }
+    }
+
+    private void removeAllFeatures(){
+        greenFeatureList.clear();
+        yellowFeatureList.clear();
+        redFeatureList.clear();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void addRouteLayer(int colour){
+        if (mapboxMap != null){
+            mapboxMap.getStyle(style -> {
+
+                String lineSourceID = getLineSourceIdFromColour(colour);
+                String lineLayerID = "line-layer-" + UUID.randomUUID().toString();
+                LineLayer lineLayer = new LineLayer(lineLayerID, lineSourceID);
+                style.addLayer(lineLayer.withProperties(
+                        lineCap(Property.LINE_CAP_ROUND),
+                        lineJoin(Property.LINE_JOIN_ROUND),
+                        lineWidth(8f),
+                        lineColor(getColor(colour)))
+                );
             });
         }
     }
 
-    /**
-     * Draw one section of route between two points.
-     * @param origin
-     * @param destination
-     * @param color
-     */
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private void drawOneLegOfRoute(Point origin, Point destination, int color){
+    private void addLegSourceOfRoute(Point origin, Point destination, int colour){
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(origin);
         coordinates.add(destination);
@@ -524,21 +546,48 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mapboxMap.getStyle(style -> {
 
                 LineString lineString = LineString.fromLngLats(coordinates);
-                FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
-                String lineSourceID = "add-line-source-" + coordinates.toString() + UUID.randomUUID().toString();
-                GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
+                String lineSourceID = getLineSourceIdFromColour(colour);
+                List<Feature> featureList = getFeatureListFromColour(colour);
+                FeatureCollection featureCollection;
+                featureList.add(Feature.fromGeometry(lineString));
+                featureCollection = FeatureCollection.fromFeatures(featureList);
 
-                style.addSource(geoJsonSource);
-                String lineLayerID = "add-line-layer-" + coordinates.toString() + UUID.randomUUID().toString();
-                LineLayer lineLayer = new LineLayer(lineLayerID, lineSourceID);
-                style.addLayer(lineLayer.withProperties(
-                        lineCap(Property.LINE_CAP_ROUND),
-                        lineJoin(Property.LINE_JOIN_ROUND),
-                        lineWidth(8f),
-                        lineColor(getColor(color)))
-                );
+                if (!isLineSourceExist(lineSourceID)){
+                    GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
+                    style.addSource(geoJsonSource);
+                } else {
+                    GeoJsonSource geoJsonSource = (GeoJsonSource) style.getSource(lineSourceID);
+                    geoJsonSource.setGeoJson(featureCollection);
+                }
+
             });
         }
+    }
+
+    private String getLineSourceIdFromColour(int colour){
+        String lineSourceId = "";
+        if (colour == R.color.routeGreen)
+            lineSourceId = "green-line-source";
+        else if (colour == R.color.routeYellow)
+            lineSourceId = "yellow-line-source";
+        else if (colour == R.color.routeRed)
+            lineSourceId = "red-line-source";
+        return lineSourceId;
+    }
+
+    private List<Feature> getFeatureListFromColour(int colour){
+        List<Feature> featureList = null;
+        if (colour == R.color.routeGreen)
+            featureList = greenFeatureList;
+        else if (colour == R.color.routeYellow)
+            featureList = yellowFeatureList;
+        else if (colour == R.color.routeRed)
+            featureList = redFeatureList;
+        return featureList;
+    }
+
+    private boolean isLineSourceExist(String lineSourceID){
+        return mapboxMap.getStyle().getSource(lineSourceID) != null;
     }
 
     /**
