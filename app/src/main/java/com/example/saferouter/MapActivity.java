@@ -199,6 +199,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         hideMarker("destination-symbol-layer-id");
     }
 
+    /**
+     * Get user's current location
+     * @return
+     */
     private Point getCurrentLocation(){
         return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
                 locationComponent.getLastKnownLocation().getLatitude());
@@ -265,7 +269,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
-                setOriginPointMarkerResource(originPoint);
+                setOriginPointMarkerSsource(originPoint);
                 if (!originPoint.equals(getCurrentLocation()))
                     showMarker("origin-symbol-layer-id");
                 if (destinationPoint != null)
@@ -274,14 +278,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void setDestinationMarkerResource(Point destination){
+    /**
+     * Set the marker geojson source of the destination
+     * @param destination
+     */
+    private void setDestinationMarkerSource(Point destination){
         GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
         if (destinationSource != null) {
             destinationSource.setGeoJson(Feature.fromGeometry(destination));
         }
     }
 
-    private void setOriginPointMarkerResource(Point originPoint){
+    /**
+     * Set the marker geojson source of the origin point
+     * @param originPoint
+     */
+    private void setOriginPointMarkerSsource(Point originPoint){
         GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
         if (originSource != null && !originPoint.equals(getCurrentLocation())) {
             originSource.setGeoJson(Feature.fromGeometry(originPoint));
@@ -289,12 +301,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
+    /**
+     * Hide a marker
+     * @param layerId
+     */
     private void hideMarker(String layerId){
         Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.NONE));
     }
 
+    /**
+     * Show a marker on the map
+     * @param layerId
+     */
     private void showMarker(String layerId){
         Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
@@ -302,10 +322,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
+    /**
+     * Render the multi-coloured polyline of the route on the map
+     * @param originPoint
+     * @param destination
+     */
     private void renderRouteOnMap(Point originPoint, Point destination){
 
-        setDestinationMarkerResource(destination);
-        setOriginPointMarkerResource(originPoint);
+        setDestinationMarkerSource(destination);
+        setOriginPointMarkerSsource(originPoint);
 
         removeLayersAndResource();
         getRouteFromMapbox(originPoint, destination);
@@ -330,6 +355,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         loadedMapStyle.addLayer(destinationSymbolLayer);
     }
 
+    /**
+     * Add the origin point icon symbol
+     * @param loadedMapStyle
+     */
     private void addOriginIconSymbolLayer(@NonNull Style loadedMapStyle) {
         loadedMapStyle.addImage("origin-icon-id",
                 BitmapFactory.decodeResource(this.getResources(), R.drawable.mapbox_marker_icon_default));
@@ -470,9 +499,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             //drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
             addLegSourceOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
         }
-        addRouteLayer(R.color.routeGreen);
-        addRouteLayer(R.color.routeYellow);
-        addRouteLayer(R.color.routeRed);
+        for (int i = 0; i <= colorArr.length - 1; i++){
+            addRouteLayer(colorArr[i]);
+        }
     }
 
     /**
@@ -513,12 +542,19 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * Remove all the features of the multi coloured route
+     */
     private void removeAllFeatures(){
         greenFeatureList.clear();
         yellowFeatureList.clear();
         redFeatureList.clear();
     }
 
+    /**
+     * Add a layer of one of the colours of the route
+     * @param colour
+     */
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void addRouteLayer(int colour){
         if (mapboxMap != null){
@@ -537,6 +573,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * Add geojson source of a step of a route
+     * @param origin
+     * @param destination
+     * @param colour
+     */
     private void addLegSourceOfRoute(Point origin, Point destination, int colour){
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(origin);
@@ -564,6 +606,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    /**
+     * Get the corresponding line source id from the colour
+     * @param colour
+     * @return
+     */
     private String getLineSourceIdFromColour(int colour){
         String lineSourceId = "";
         if (colour == R.color.routeGreen)
@@ -575,6 +622,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return lineSourceId;
     }
 
+    /**
+     * Get the corresponding feature list from the colour
+     * @param colour
+     * @return
+     */
     private List<Feature> getFeatureListFromColour(int colour){
         List<Feature> featureList = null;
         if (colour == R.color.routeGreen)
@@ -586,6 +638,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return featureList;
     }
 
+    /**
+     * Evaluate whether a line source exists
+     * @param lineSourceID
+     * @return
+     */
     private boolean isLineSourceExist(String lineSourceID){
         return mapboxMap.getStyle().getSource(lineSourceID) != null;
     }
