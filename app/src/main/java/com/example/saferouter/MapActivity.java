@@ -60,6 +60,7 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
+
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
@@ -72,6 +73,9 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
 import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -113,6 +117,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     Button colourInfoButton;
     @BindView(R.id.button_clear)
     Button clearAllButton;
+    /*@BindView(R.id.startButton)
+    Button startNavigationButton;*/
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -153,8 +159,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 addOriginIconSymbolLayer(style);
 
                 latLngBoundsMelbourne = new LatLngBounds.Builder()
-                        .include(new LatLng(-38.2250,145.5498))
-                        .include(new LatLng(-37.5401,144.5532))
+                        .include(new LatLng(-38.2250, 145.5498))
+                        .include(new LatLng(-37.5401, 144.5532))
                         .build();
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
@@ -168,27 +174,38 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
     @OnClick(R.id.origin_search_bar)
-    public void originSearchBarOnClick(View v){
+    public void originSearchBarOnClick(View v) {
         clickedSearchBarId = v.getId();
         redirectToSearchScreen();
     }
 
     @OnClick(R.id.destination_search_bar)
-    public void destinationSearchBarOnClick(View v){
+    public void destinationSearchBarOnClick(View v) {
         clickedSearchBarId = v.getId();
         redirectToSearchScreen();
     }
 
     @OnClick(R.id.button_colour_info)
-    public void colorButtonOnClick(){
+    public void colorButtonOnClick() {
         showColourInfoDialog();
     }
+
+    /*@OnClick(R.id.startButton)
+    public void startNavigationButtonOnClick() {
+        boolean simulateRoute = true;
+        NavigationLauncherOptions options = NavigationLauncherOptions.builder()
+                .directionsRoute(currentRoute)
+                .shouldSimulateRoute(simulateRoute)
+                .build();
+        // Call this method with Context from within an Activity
+        NavigationLauncher.startNavigation(MapActivity.this, options);
+    }*/
 
     /**
      * Clear all displayed routes and move the camera back to user's location
      */
     @OnClick(R.id.button_clear)
-    public void clearButtonOnClick(){
+    public void clearButtonOnClick() {
         removeLayersAndResource();
         originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
@@ -197,13 +214,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         destinationPoint = null;
         hideMarker("origin-symbol-layer-id");
         hideMarker("destination-symbol-layer-id");
+        //startNavigationButton.setEnabled(false);
     }
 
     /**
      * Get user's current location
+     *
      * @return
      */
-    private Point getCurrentLocation(){
+    private Point getCurrentLocation() {
         return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
                 locationComponent.getLastKnownLocation().getLatitude());
     }
@@ -211,7 +230,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Redirect to search location screen
      */
-    private void redirectToSearchScreen(){
+    private void redirectToSearchScreen() {
         Intent intent = new PlaceAutocomplete.IntentBuilder()
                 .accessToken(Mapbox.getAccessToken())
                 .placeOptions(PlaceOptions.builder()
@@ -227,8 +246,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Recenter the camera position and zoom level to display the whole route on the map.
      */
-    private void recenterCameraAfterDisplayingRoute(){
-        if (mapboxMap != null){
+    private void recenterCameraAfterDisplayingRoute() {
+        if (mapboxMap != null) {
             LatLng startPoint = new LatLng(pointsOfRoute.get(0).latitude(), pointsOfRoute.get(0).longitude());
             LatLng destination = new LatLng(pointsOfRoute.get(pointsOfRoute.size() - 1).latitude(), pointsOfRoute.get(pointsOfRoute.size() - 1).longitude());
 
@@ -243,6 +262,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Receive location result and display the destination and route
+     *
      * @param requestCode
      * @param resultCode
      * @param data
@@ -256,7 +276,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             if (clickedSearchBarId == R.id.destination_search_bar) {
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
 
-                destinationPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
+                destinationPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
 
                 if (destinationPoint.equals(originPoint))
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
@@ -265,7 +285,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
-                originPoint = Point.fromLngLat(((Point)selectedLocationCarmenFeature.geometry()).longitude(), ((Point)selectedLocationCarmenFeature.geometry()).latitude());
+                originPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
                 LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
@@ -280,9 +300,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Set the marker geojson source of the destination
+     *
      * @param destination
      */
-    private void setDestinationMarkerSource(Point destination){
+    private void setDestinationMarkerSource(Point destination) {
         GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
         if (destinationSource != null) {
             destinationSource.setGeoJson(Feature.fromGeometry(destination));
@@ -291,9 +312,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Set the marker geojson source of the origin point
+     *
      * @param originPoint
      */
-    private void setOriginPointMarkerSsource(Point originPoint){
+    private void setOriginPointMarkerSsource(Point originPoint) {
         GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
         if (originSource != null && !originPoint.equals(getCurrentLocation())) {
             originSource.setGeoJson(Feature.fromGeometry(originPoint));
@@ -303,9 +325,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Hide a marker
+     *
      * @param layerId
      */
-    private void hideMarker(String layerId){
+    private void hideMarker(String layerId) {
         Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.NONE));
@@ -313,9 +336,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Show a marker on the map
+     *
      * @param layerId
      */
-    private void showMarker(String layerId){
+    private void showMarker(String layerId) {
         Layer layer = mapboxMap.getStyle().getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.VISIBLE));
@@ -324,10 +348,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Render the multi-coloured polyline of the route on the map
+     *
      * @param originPoint
      * @param destination
      */
-    private void renderRouteOnMap(Point originPoint, Point destination){
+    private void renderRouteOnMap(Point originPoint, Point destination) {
 
         setDestinationMarkerSource(destination);
         setOriginPointMarkerSsource(originPoint);
@@ -339,6 +364,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Add the destination icon symbol
+     *
      * @param loadedMapStyle
      */
     private void addDestinationIconSymbolLayer(@NonNull Style loadedMapStyle) {
@@ -357,6 +383,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Add the origin point icon symbol
+     *
      * @param loadedMapStyle
      */
     private void addOriginIconSymbolLayer(@NonNull Style loadedMapStyle) {
@@ -373,7 +400,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         loadedMapStyle.addLayer(originSymbolLayer);
     }
 
-    @SuppressWarnings( {"MissingPermission"})
+    @SuppressWarnings({"MissingPermission"})
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
 
@@ -395,10 +422,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Request for safety level numbers from external api.
+     *
      * @param jsonString
      * @param callback
      */
-    private void getSafetyLevel(String jsonString, Callback<ResponseBody> callback){
+    private void getSafetyLevel(String jsonString, Callback<ResponseBody> callback) {
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(SafetyLevelApiInterface.BASE_URL)
@@ -427,6 +455,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 List<String> safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
                 drawRoutePolyLine(safetyLevels);
                 recenterCameraAfterDisplayingRoute();
+                //startNavigationButton.setEnabled(true);
+                //startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -442,76 +472,74 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Get a route with simplified mode of overview from mapbox directions api
+     *
      * @param origin
      * @param destination
      */
-    private void getRouteFromMapbox(Point origin, Point destination){
-
-        directionsRequestClient = MapboxDirections.builder()
+    private void getRouteFromMapbox(Point origin, Point destination) {
+        NavigationRoute.builder(this)
+                .accessToken(Mapbox.getAccessToken())
                 .origin(origin)
                 .destination(destination)
-                .overview(DirectionsCriteria.OVERVIEW_FULL)
-                .profile(DirectionsCriteria.PROFILE_DRIVING)
-                .accessToken(getString(R.string.access_token))
-                .build();
+                .build()
+                .getRoute(new Callback<DirectionsResponse>() {
+                    @Override
+                    public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                        Log.d(TAG, "Response code: " + response.code());
+                        if (response.body() == null) {
+                            Log.e(TAG, "No routes found, make sure you set the right user and access token.");
+                            Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
+                            return;
+                        } else if (response.body().routes().size() < 1) {
+                            Log.e(TAG, "No routes found");
+                            Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
+                            return;
+                        }
 
-        directionsRequestClient.enqueueCall(new Callback<DirectionsResponse>() {
-            @RequiresApi(api = Build.VERSION_CODES.M)
-            @Override
-            public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
-                Log.d(TAG, "Response code: " + response.code());
-                if (response.body() == null) {
-                    Log.e(TAG, "No routes found, make sure you set the right user and access token.");
-                    Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
-                    return;
-                } else if (response.body().routes().size() < 1) {
-                    Log.e(TAG, "No routes found");
-                    Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
-                    return;
-                }
+                        currentRoute = response.body().routes().get(0);
 
-                currentRoute = response.body().routes().get(0);
+                        //Collect the coordinates on the route
+                        pointsOfRoute = getPointsOfRoutes(currentRoute);
+                        String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
 
-                //Collect the coordinates on the route
-                pointsOfRoute = getPointsOfRoutes(currentRoute);
-                String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
+                        //Request for safety levels of different sections of the returned route.
+                        getSafetyLevel(coordinatesString, safetyLevelCallback);
 
-                //Request for safety levels of different sections of the returned route.
-                getSafetyLevel(coordinatesString,safetyLevelCallback);
+                    }
 
-            }
+                    @Override
+                    public void onFailure(Call<DirectionsResponse> call, Throwable throwable) {
+                        Log.e(TAG, "Error: " + throwable.getMessage());
+                    }
 
-            @Override
-            public void onFailure(Call<DirectionsResponse> call, Throwable t) {
-                Log.e(TAG, "Error: " + t.getMessage());
-            }
-        });
+
+                });
     }
 
     /**
      * Draw the polyline section by section
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void drawRoutePolyLine(List<String> safetyLevelList){
+    private void drawRoutePolyLine(List<String> safetyLevelList) {
         Map safetyLevelMap = Utils.getSafetyLevelColourMap();
-        for (int i = 0; i <= pointsOfRoute.size() -2; i++){
-            int colourOfSection = (int)safetyLevelMap.get(safetyLevelList.get(i));
-            //drawOneLegOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
+        for (int i = 0; i <= pointsOfRoute.size() - 2; i++) {
+            int colourOfSection = (int) safetyLevelMap.get(safetyLevelList.get(i));
             addLegSourceOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
         }
-        for (int i = 0; i <= colorArr.length - 1; i++){
+        for (int i = 0; i <= colorArr.length - 1; i++) {
             addRouteLayer(colorArr[i]);
         }
     }
 
     /**
      * Retrieve coordinates from the geometry attributes of the response route.
-      * @param directionsRoute
+     *
+     * @param directionsRoute
      * @return
      */
-    private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute){
+    private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute) {
         List<Point> points = new ArrayList<>();
-        if (directionsRoute != null){
+        if (directionsRoute != null) {
             String encodedPolyline = directionsRoute.geometry();
             points = PolylineUtils.decode(encodedPolyline, 6);
         }
@@ -521,19 +549,19 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Remove line layers and sources
      */
-    private void removeLayersAndResource(){
-        if (mapboxMap != null){
+    private void removeLayersAndResource() {
+        if (mapboxMap != null) {
             mapboxMap.getStyle(style -> {
                 String layerId;
                 List<Layer> layers = style.getLayers();
-                for (Layer layer: layers){
+                for (Layer layer : layers) {
                     layerId = layer.getId();
                     if (layerId.contains("line-layer"))
                         style.removeLayer(layer.getId());
                 }
 
                 List<Source> sources = style.getSources();
-                for (Source source: sources){
+                for (Source source : sources) {
                     if (source.getId().contains("line-source"))
                         style.removeSource(source.getId());
                 }
@@ -545,7 +573,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Remove all the features of the multi coloured route
      */
-    private void removeAllFeatures(){
+    private void removeAllFeatures() {
         greenFeatureList.clear();
         yellowFeatureList.clear();
         redFeatureList.clear();
@@ -553,11 +581,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Add a layer of one of the colours of the route
+     *
      * @param colour
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void addRouteLayer(int colour){
-        if (mapboxMap != null){
+    private void addRouteLayer(int colour) {
+        if (mapboxMap != null) {
             mapboxMap.getStyle(style -> {
 
                 String lineSourceID = getLineSourceIdFromColour(colour);
@@ -575,16 +604,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Add geojson source of a step of a route
+     *
      * @param origin
      * @param destination
      * @param colour
      */
-    private void addLegSourceOfRoute(Point origin, Point destination, int colour){
+    private void addLegSourceOfRoute(Point origin, Point destination, int colour) {
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(origin);
         coordinates.add(destination);
 
-        if (mapboxMap != null){
+        if (mapboxMap != null) {
             mapboxMap.getStyle(style -> {
 
                 LineString lineString = LineString.fromLngLats(coordinates);
@@ -594,7 +624,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 featureList.add(Feature.fromGeometry(lineString));
                 featureCollection = FeatureCollection.fromFeatures(featureList);
 
-                if (!isLineSourceExist(lineSourceID)){
+                if (!isLineSourceExist(lineSourceID)) {
                     GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
                     style.addSource(geoJsonSource);
                 } else {
@@ -608,10 +638,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Get the corresponding line source id from the colour
+     *
      * @param colour
      * @return
      */
-    private String getLineSourceIdFromColour(int colour){
+    private String getLineSourceIdFromColour(int colour) {
         String lineSourceId = "";
         if (colour == R.color.routeGreen)
             lineSourceId = "green-line-source";
@@ -624,10 +655,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Get the corresponding feature list from the colour
+     *
      * @param colour
      * @return
      */
-    private List<Feature> getFeatureListFromColour(int colour){
+    private List<Feature> getFeatureListFromColour(int colour) {
         List<Feature> featureList = null;
         if (colour == R.color.routeGreen)
             featureList = greenFeatureList;
@@ -640,17 +672,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Evaluate whether a line source exists
+     *
      * @param lineSourceID
      * @return
      */
-    private boolean isLineSourceExist(String lineSourceID){
+    private boolean isLineSourceExist(String lineSourceID) {
         return mapboxMap.getStyle().getSource(lineSourceID) != null;
     }
 
     /**
      * Display the dialog of colour information.
      */
-    private void showColourInfoDialog(){
+    private void showColourInfoDialog() {
         Dialog dialog = new Dialog(MapActivity.this);
         dialog.setContentView(R.layout.dialog_view);
         Button dialogButton = dialog.findViewById(R.id.buttonOk);
@@ -663,7 +696,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         dialog.show();
     }
 
-    @SuppressWarnings( {"MissingPermission"})
+    @SuppressWarnings({"MissingPermission"})
     private void enableLocationComponent(@NonNull Style loadedMapStyle) {
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {

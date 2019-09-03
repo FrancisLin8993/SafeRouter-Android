@@ -37,13 +37,27 @@
             mapbox:mt_speechMode="false"
             mapbox:mt_placeholder="@string/destination_init_holder"/>
 
+        <!--<Button
+            android:id="@+id/startButton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="@color/mapboxGrayLight"
+            android:enabled="false"
+            android:visibility="visible"
+            android:text="@string/start_navigation"
+            android:textColor="@color/mapboxWhite"
+            />-->
+
         <com.mapbox.mapboxsdk.maps.MapView
             android:id="@+id/mapView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             mapbox:mapbox_cameraZoom="14"
             />
-
     </LinearLayout>
 
 
