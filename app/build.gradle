@@ -41,4 +41,5 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:4.8.0'
     implementation 'com.jakewharton:butterknife:8.8.1'
     annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
+    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:4.8.0'
 }

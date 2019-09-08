@@ -37,7 +37,7 @@
             mapbox:mt_speechMode="false"
             mapbox:mt_placeholder="@string/destination_init_holder"/>
 
-        <!--<Button
+        <Button
             android:id="@+id/startButton"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -50,7 +50,7 @@
             android:visibility="visible"
             android:text="@string/start_navigation"
             android:textColor="@color/mapboxWhite"
-            />-->
+            />
 
         <com.mapbox.mapboxsdk.maps.MapView
             android:id="@+id/mapView"

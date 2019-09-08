@@ -13,6 +13,7 @@ import android.os.Bundle;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +32,7 @@ import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.MapboxDirections;
+import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -75,7 +77,22 @@ import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
+import com.mapbox.services.android.navigation.ui.v5.NavigationView;
+import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine;
+import com.mapbox.services.android.navigation.v5.milestone.Milestone;
+import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener;
+import com.mapbox.services.android.navigation.v5.milestone.RouteMilestone;
+import com.mapbox.services.android.navigation.v5.milestone.Trigger;
+import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
+import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation;
+import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions;
+import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
+import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener;
+import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress;
+import com.mapbox.turf.TurfClassification;
+import com.mapbox.turf.TurfConstants;
+import com.mapbox.turf.TurfMeasurement;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -95,7 +112,7 @@ import android.view.View;
 /**
  * Activity of the Mapbox related features.
  */
-public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener {
+public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener, NavigationEventListener, ProgressChangeListener, MilestoneEventListener {
     // variables for adding location layer
     private MapView mapView;
     private MapboxMap mapboxMap;
@@ -112,17 +129,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @BindView(R.id.destination_search_bar)
     MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
-    private MapboxDirections directionsRequestClient;
     @BindView(R.id.button_colour_info)
     Button colourInfoButton;
     @BindView(R.id.button_clear)
     Button clearAllButton;
-    /*@BindView(R.id.startButton)
-    Button startNavigationButton;*/
+    @BindView(R.id.startButton)
+    Button startNavigationButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
     private LatLngBounds latLngBoundsMelbourne;
+    private MapboxNavigation navigation;
+    ReplayRouteLocationEngine replayEngine;
 
     private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
@@ -145,6 +163,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
+        MapboxNavigationOptions options = MapboxNavigationOptions.builder()
+                .isDebugLoggingEnabled(true)
+                .build();
+        navigation = new MapboxNavigation(this, Mapbox.getAccessToken(), options);
     }
 
     @Override
@@ -190,8 +212,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         showColourInfoDialog();
     }
 
-    /*@OnClick(R.id.startButton)
+    @OnClick(R.id.startButton)
     public void startNavigationButtonOnClick() {
+
+        navigation.addNavigationEventListener(this);
+        navigation.addProgressChangeListener(this);
+        navigation.addMilestoneEventListener(this);
+
+        replayEngine = new ReplayRouteLocationEngine();
+        replayEngine.assign(currentRoute);
+        navigation.setLocationEngine(replayEngine);
+        navigation.startNavigation(currentRoute);
+
         boolean simulateRoute = true;
         NavigationLauncherOptions options = NavigationLauncherOptions.builder()
                 .directionsRoute(currentRoute)
@@ -199,7 +231,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .build();
         // Call this method with Context from within an Activity
         NavigationLauncher.startNavigation(MapActivity.this, options);
-    }*/
+
+
+    }
 
     /**
      * Clear all displayed routes and move the camera back to user's location
@@ -214,7 +248,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         destinationPoint = null;
         hideMarker("origin-symbol-layer-id");
         hideMarker("destination-symbol-layer-id");
-        //startNavigationButton.setEnabled(false);
+        startNavigationButton.setEnabled(false);
+        startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
     }
 
     /**
@@ -259,6 +294,152 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mapboxMap.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 200));
         }
     }
+
+    /**
+     * Build a custom milstone for voice alert.
+     * @param stepIndex
+     * @return
+     */
+    private Milestone buildOneMilestone(int stepIndex) {
+        return new RouteMilestone.Builder()
+                .setIdentifier(stepIndex)
+                .setTrigger(
+                        Trigger.all(
+                                Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex - 1),
+                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, 500)
+                        )
+                ).build();
+    }
+
+
+    /**
+     * Add all milestones in navigation
+     * @param milestoneStepIndexList
+     */
+    private void addAllMilestone(List<Integer> milestoneStepIndexList){
+        for (Integer stepIndex : milestoneStepIndexList){
+            navigation.addMilestone(buildOneMilestone(stepIndex));
+        }
+    }
+
+    /**
+     *
+     * @param safetyLevelString
+     * @return
+     */
+    private List<Integer> getMilstoneStepIndex(List<String> safetyLevelString) {
+        List<Integer> milestoneStepIndexList = new ArrayList<>();
+
+        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelString);
+
+        List<Point> stepsPointList = getTheStepPointsFromCurrentRoute();
+
+        for (Integer integer : dangerousPointIndexList) {
+            Point dangerousPoint = pointsOfRoute.get(integer);
+            Point nearestStepPoint = getTheNearestStepPointOfDangerousPoint(dangerousPoint, stepsPointList);
+            Map<Integer, Double> stepIndexAndDistanceMap = getStepIndexWhereDangerousPointIn(dangerousPoint, nearestStepPoint, stepsPointList);
+            int milesonteStepIndex = evaluateStepIndex(dangerousPoint, stepIndexAndDistanceMap);
+
+            milestoneStepIndexList.add(milesonteStepIndex);
+
+        }
+
+        return milestoneStepIndexList;
+    }
+
+    /**
+     * Get the nearest step point from the dangerous point.
+     *
+     * @param dangerousPoint
+     * @param stepPoints
+     * @return
+     */
+    private Point getTheNearestStepPointOfDangerousPoint(Point dangerousPoint, List<Point> stepPoints) {
+        return TurfClassification.nearestPoint(dangerousPoint, stepPoints);
+    }
+
+    /**
+     * Get the distance between two points
+     *
+     * @param dangerousPoint
+     * @param stepPoint
+     * @return
+     */
+    private double calculateDistanceBetweenTwoPoint(Point dangerousPoint, Point stepPoint) {
+        return TurfMeasurement.distance(dangerousPoint, stepPoint, TurfConstants.UNIT_METRES);
+    }
+
+    /**
+     * Get the nearest step index and the distance from a dangerous point.
+     *
+     * @param dangerousPoint
+     * @param stepPoints
+     * @return
+     */
+    private Map<Integer, Double> getStepIndexWhereDangerousPointIn(Point dangerousPoint, Point nearestStepPoint, List<Point> stepPoints) {
+        Map<Integer, Double> stepIndexAndDistanceMap = new HashMap<>();
+
+        double distance = calculateDistanceBetweenTwoPoint(dangerousPoint, nearestStepPoint);
+        int stepIndex = stepPoints.indexOf(nearestStepPoint);
+
+        stepIndexAndDistanceMap.put(stepIndex, distance);
+        return stepIndexAndDistanceMap;
+    }
+
+    /**
+     * evaluate whether a dangerous point is in the given step. If true, yes. If not, in the previous step.
+     *
+     * @param dangerousPoint
+     * @param stepIndexAndDistanceMap
+     * @return
+     */
+    private int evaluateStepIndex(Point dangerousPoint, Map stepIndexAndDistanceMap) {
+
+        int stepIndex = (int) stepIndexAndDistanceMap.keySet().toArray()[0];
+
+        double distanceofNextStep = calculateDistanceBetweenTwoPoint(dangerousPoint, pointsOfRoute.get(stepIndex + 1));
+
+        LegStep step = currentRoute.legs().get(0).steps().get(stepIndex);
+
+        if (distanceofNextStep + (double) stepIndexAndDistanceMap.get(stepIndex) == step.distance())
+            return stepIndex;
+        else
+            return stepIndex - 1;
+    }
+
+
+    /**
+     * Get all the point index of dangerous points from the current route
+     *
+     * @param safetyLevelString
+     * @return
+     */
+    private List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
+        List<Integer> dangerousPointIndexList = new ArrayList<>();
+        for (String string : safetyLevelString) {
+            if (string.equals("3.0"))
+                dangerousPointIndexList.add(safetyLevelString.indexOf(string));
+        }
+        return dangerousPointIndexList;
+    }
+
+    /**
+     * Get all the starting points of steps in the route
+     *
+     * @return
+     */
+    private List<Point> getTheStepPointsFromCurrentRoute() {
+        List<Point> stepPoints = new ArrayList<>();
+
+        List<LegStep> legSteps = currentRoute.legs().get(0).steps();
+
+        for (LegStep step : legSteps) {
+            stepPoints.add(step.maneuver().location());
+        }
+
+        return stepPoints;
+    }
+
 
     /**
      * Receive location result and display the destination and route
@@ -455,8 +636,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 List<String> safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
                 drawRoutePolyLine(safetyLevels);
                 recenterCameraAfterDisplayingRoute();
-                //startNavigationButton.setEnabled(true);
-                //startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
+                addAllMilestone(getMilstoneStepIndex(safetyLevels));
+                startNavigationButton.setEnabled(true);
+                startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -727,6 +909,21 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         locationEngine.getLastLocation(callback);
     }
 
+    @Override
+    public void onRunning(boolean running) {
+
+    }
+
+    @Override
+    public void onProgressChange(Location location, RouteProgress routeProgress) {
+
+    }
+
+    @Override
+    public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
+
+    }
+
     private static class MainActivityLocationCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
@@ -820,6 +1017,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+        navigation.onDestroy();
     }
 
     @Override
