@@ -1,31 +1,16 @@
-package com.example.saferouter;
+package com.example.saferouter.utils;
 
 import com.mapbox.geojson.Point;
 
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Miscellaneous methods using in the program.
  */
 public class Utils {
-
-    /**
-     * The mapping between safety level numbers and colours
-     * @return
-     */
-    public static Map<String, Integer> getSafetyLevelColourMap() {
-        final Map<String, Integer> safetyLevelColourMap  = new HashMap<String, Integer>(){{
-            put("1.0", R.color.routeGreen);
-            put("2.0", R.color.routeYellow);
-            put("3.0", R.color.routeRed);
-        }};
-        return safetyLevelColourMap;
-    }
 
     /**
      * Generate a corresponding string format of a coordinate for safety level api request

@@ -1,5 +1,6 @@
 package com.example.saferouter;
 
+import com.example.saferouter.utils.Utils;
 import com.mapbox.geojson.Point;
 
 import org.junit.Test;
@@ -7,7 +8,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.saferouter.Utils.generateJsonStringForOneCoordinates;
+import static com.example.saferouter.utils.Utils.generateJsonStringForOneCoordinates;
 import static org.junit.Assert.*;
 
 public class MapActivityTest {

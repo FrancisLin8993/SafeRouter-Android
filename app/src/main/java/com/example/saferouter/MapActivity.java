@@ -24,14 +24,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.example.saferouter.network.SafetyLevelApiInterface;
+import com.example.saferouter.utils.Utils;
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
-import com.mapbox.api.directions.v5.DirectionsCriteria;
-import com.mapbox.api.directions.v5.MapboxDirections;
 import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
@@ -77,7 +77,6 @@ import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
-import com.mapbox.services.android.navigation.ui.v5.NavigationView;
 import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine;
 import com.mapbox.services.android.navigation.v5.milestone.Milestone;
 import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener;
@@ -138,21 +137,40 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
-    private LatLngBounds latLngBoundsMelbourne;
+    //private LatLngBounds latLngBoundsMelbourne;
     private MapboxNavigation navigation;
     ReplayRouteLocationEngine replayEngine;
-
-    private int[] colorArr = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
-    private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
-
     private LocationEngine locationEngine;
-    private long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
-    private long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
     // Variables needed to listen to location updates
     private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
     private List<Feature> greenFeatureList = new ArrayList<>();
     private List<Feature> yellowFeatureList = new ArrayList<>();
     private List<Feature> redFeatureList = new ArrayList<>();
+    //Constants
+    private final int[] SAFETY_LEVEL_COLOURS = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
+    private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
+    private final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
+    private final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
+    private final String SAFE_LEVEL = "1.0";
+    private final String MEDIUM_LEVEL = "2.0";
+    private final String DANGEROUS_LEVEL = "3.0";
+    private final LatLngBounds BBOX_MELBOURNE = new LatLngBounds.Builder()
+            .include(new LatLng(-38.2250, 145.5498))
+            .include(new LatLng(-37.5401, 144.5532))
+            .build();
+    private final int AUTO_COMPLETE_LIST_LIMIT = 5;
+    private final String PLACE_SEARCH_COUNTRY = "AU";
+    private final int DISTANCE_TO_VOICE_ALERT_POINT = 500;
+    private final String NO_ROUTES_ERROR_MESSAGE = "No routes found";
+    private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
+    private final Map<String, Integer> SAFETY_LEVEL_COLOUR_MAP = new HashMap<String, Integer>() {
+        {
+            put(SAFE_LEVEL, R.color.routeGreen);
+            put(MEDIUM_LEVEL, R.color.routeYellow);
+            put(DANGEROUS_LEVEL, R.color.routeRed);
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -180,14 +198,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 addDestinationIconSymbolLayer(style);
                 addOriginIconSymbolLayer(style);
 
-                latLngBoundsMelbourne = new LatLngBounds.Builder()
+                /*latLngBoundsMelbourne = new LatLngBounds.Builder()
                         .include(new LatLng(-38.2250, 145.5498))
                         .include(new LatLng(-37.5401, 144.5532))
-                        .build();
+                        .build();*/
 
                 mapboxMap.addOnMapClickListener(MapActivity.this);
                 //Limit the camera inside the latitude and longitude bounds of Greater Melbourne.
-                mapboxMap.setLatLngBoundsForCameraTarget(latLngBoundsMelbourne);
+                mapboxMap.setLatLngBoundsForCameraTarget(BBOX_MELBOURNE);
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
@@ -270,8 +288,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .accessToken(Mapbox.getAccessToken())
                 .placeOptions(PlaceOptions.builder()
                         .backgroundColor(Color.WHITE)
-                        .limit(5)
-                        .country("AU")
+                        .limit(AUTO_COMPLETE_LIST_LIMIT)
+                        .country(PLACE_SEARCH_COUNTRY)
                         .bbox(144.5532, -38.2250, 145.5498, -37.5401)
                         .build(PlaceOptions.MODE_CARDS))
                 .build(MapActivity.this);
@@ -306,7 +324,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .setTrigger(
                         Trigger.all(
                                 Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex - 1),
-                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, 500)
+                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, DISTANCE_TO_VOICE_ALERT_POINT)
                         )
                 ).build();
     }
@@ -627,8 +645,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
             Log.d(TAG, "Response code: " + response.code());
             if (response.body() == null) {
-                Log.e(TAG, "No safety level found");
-                Toast.makeText(MapActivity.this, "No safety levels found", Toast.LENGTH_LONG).show();
+                Log.e(TAG, NO_SAFETY_LEVEL_ERROR_MESSAGE);
+                Toast.makeText(MapActivity.this, NO_SAFETY_LEVEL_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
                 return;
             }
             try {
@@ -669,12 +687,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
                         Log.d(TAG, "Response code: " + response.code());
                         if (response.body() == null) {
-                            Log.e(TAG, "No routes found, make sure you set the right user and access token.");
-                            Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
+                            Log.e(TAG, NO_ROUTES_ERROR_MESSAGE);
+                            Toast.makeText(MapActivity.this, NO_ROUTES_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
                             return;
                         } else if (response.body().routes().size() < 1) {
-                            Log.e(TAG, "No routes found");
-                            Toast.makeText(MapActivity.this, "No routes found", Toast.LENGTH_LONG).show();
+                            Log.e(TAG, NO_ROUTES_ERROR_MESSAGE);
+                            Toast.makeText(MapActivity.this, NO_ROUTES_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
                             return;
                         }
 
@@ -703,13 +721,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void drawRoutePolyLine(List<String> safetyLevelList) {
-        Map safetyLevelMap = Utils.getSafetyLevelColourMap();
+        Map safetyLevelMap = SAFETY_LEVEL_COLOUR_MAP;
         for (int i = 0; i <= pointsOfRoute.size() - 2; i++) {
             int colourOfSection = (int) safetyLevelMap.get(safetyLevelList.get(i));
             addLegSourceOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
         }
-        for (int i = 0; i <= colorArr.length - 1; i++) {
-            addRouteLayer(colorArr[i]);
+        for (int i = 0; i <= SAFETY_LEVEL_COLOURS.length - 1; i++) {
+            addRouteLayer(SAFETY_LEVEL_COLOURS[i]);
         }
     }
 

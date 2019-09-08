@@ -1,4 +1,4 @@
-package com.example.saferouter;
+package com.example.saferouter.network;
 
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
