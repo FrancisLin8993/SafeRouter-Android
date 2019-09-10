@@ -10,11 +10,13 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,6 +34,7 @@ import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
+import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
@@ -77,12 +80,18 @@ import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
+import com.mapbox.services.android.navigation.ui.v5.voice.NavigationSpeechPlayer;
+import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement;
+import com.mapbox.services.android.navigation.ui.v5.voice.SpeechPlayerProvider;
+import com.mapbox.services.android.navigation.ui.v5.voice.VoiceInstructionLoader;
+import com.mapbox.services.android.navigation.v5.instruction.Instruction;
 import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine;
 import com.mapbox.services.android.navigation.v5.milestone.Milestone;
 import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener;
 import com.mapbox.services.android.navigation.v5.milestone.RouteMilestone;
 import com.mapbox.services.android.navigation.v5.milestone.Trigger;
 import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
+import com.mapbox.services.android.navigation.v5.milestone.VoiceInstructionMilestone;
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation;
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener;
@@ -96,6 +105,7 @@ import com.mapbox.turf.TurfMeasurement;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import okhttp3.Cache;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
@@ -138,9 +148,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Point originPoint;
     private Point destinationPoint;
     //private LatLngBounds latLngBoundsMelbourne;
-    private MapboxNavigation navigation;
+    //private MapboxNavigation navigation;
     ReplayRouteLocationEngine replayEngine;
     private LocationEngine locationEngine;
+    //private NavigationSpeechPlayer speechPlayer;
     // Variables needed to listen to location updates
     private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
     private List<Feature> greenFeatureList = new ArrayList<>();
@@ -170,6 +181,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             put(DANGEROUS_LEVEL, R.color.routeRed);
         }
     };
+    private final String VOICE_ALERT_MESSAGE = "Dangerous section ahead. Please drive safely.";
+    private static final String COMPONENT_NAVIGATION_INSTRUCTION_CACHE = "component-navigation-instruction-cache";
+    private static final long TEN_MEGABYTE_CACHE_SIZE = 10 * 1024 * 1024;
 
 
     @Override
@@ -181,10 +195,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
-        MapboxNavigationOptions options = MapboxNavigationOptions.builder()
+        /*MapboxNavigationOptions options = MapboxNavigationOptions.builder()
                 .isDebugLoggingEnabled(true)
                 .build();
-        navigation = new MapboxNavigation(this, Mapbox.getAccessToken(), options);
+        navigation = new MapboxNavigation(this, Mapbox.getAccessToken(), options);*/
     }
 
     @Override
@@ -209,9 +223,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
+                // For voice instructions
+                //initializeSpeechPlayer();
             }
         });
     }
+
+    /*private void initializeSpeechPlayer() {
+        String english = Locale.US.getLanguage();
+        Cache cache = new Cache(new File(getApplication().getCacheDir(), COMPONENT_NAVIGATION_INSTRUCTION_CACHE),
+                TEN_MEGABYTE_CACHE_SIZE);
+        VoiceInstructionLoader voiceInstructionLoader = new VoiceInstructionLoader(getApplication(),
+                Mapbox.getAccessToken(), cache);
+        SpeechPlayerProvider speechPlayerProvider = new SpeechPlayerProvider(getApplication(), english, true,
+                voiceInstructionLoader);
+        speechPlayer = new NavigationSpeechPlayer(speechPlayerProvider);
+    }*/
 
     @OnClick(R.id.origin_search_bar)
     public void originSearchBarOnClick(View v) {
@@ -230,25 +257,39 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         showColourInfoDialog();
     }
 
+    @SuppressLint("MissingPermission")
     @OnClick(R.id.startButton)
     public void startNavigationButtonOnClick() {
 
-        navigation.addNavigationEventListener(this);
+        Intent intent = new Intent(this, MapNavigationActivity.class);
+        intent.putExtra("navigationRoute", currentRoute);
+        intent.putExtra("originPoint", originPoint);
+        intent.putExtra("destination", destinationPoint);
+        startActivity(intent);
+
+        /*navigation.addNavigationEventListener(this);
         navigation.addProgressChangeListener(this);
         navigation.addMilestoneEventListener(this);
 
         replayEngine = new ReplayRouteLocationEngine();
         replayEngine.assign(currentRoute);
         navigation.setLocationEngine(replayEngine);
-        navigation.startNavigation(currentRoute);
+        navigation.startNavigation(currentRoute);*/
 
-        boolean simulateRoute = true;
+        /*((ReplayRouteLocationEngine) locationEngine).assign(currentRoute);
+        navigation.setLocationEngine(locationEngine);
+        mapboxMap.getLocationComponent().setLocationComponentEnabled(true);
+        navigation.startNavigation(currentRoute);*/
+
+        /*boolean simulateRoute = true;
         NavigationLauncherOptions options = NavigationLauncherOptions.builder()
                 .directionsRoute(currentRoute)
                 .shouldSimulateRoute(simulateRoute)
                 .build();
         // Call this method with Context from within an Activity
-        NavigationLauncher.startNavigation(MapActivity.this, options);
+        NavigationLauncher.startNavigation(MapActivity.this, options);*/
+
+
 
 
     }
@@ -318,6 +359,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param stepIndex
      * @return
      */
+    /*private Milestone buildOneMilestone(int stepIndex) {
+        return new RouteMilestone.Builder()
+                .setIdentifier(stepIndex)
+                .setTrigger(
+                        Trigger.all(
+                                Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex - 1),
+                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, DISTANCE_TO_VOICE_ALERT_POINT)
+                        )
+                ).build();
+    }*/
+
     private Milestone buildOneMilestone(int stepIndex) {
         return new RouteMilestone.Builder()
                 .setIdentifier(stepIndex)
@@ -330,15 +382,21 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-    /**
-     * Add all milestones in navigation
-     * @param milestoneStepIndexList
-     */
-    private void addAllMilestone(List<Integer> milestoneStepIndexList){
+
+    /*private void addAllMilestone(List<Integer> milestoneStepIndexList){
         for (Integer stepIndex : milestoneStepIndexList){
             navigation.addMilestone(buildOneMilestone(stepIndex));
         }
-    }
+    }*/
+
+    /*private void playAnnouncement(Milestone milestone) {
+        if (milestone instanceof RouteMilestone) {
+            SpeechAnnouncement announcement = SpeechAnnouncement.builder()
+                    .announcement(VOICE_ALERT_MESSAGE)
+                    .build();
+            speechPlayer.play(announcement);
+        }
+    }*/
 
     /**
      *
@@ -435,7 +493,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
         List<Integer> dangerousPointIndexList = new ArrayList<>();
         for (String string : safetyLevelString) {
-            if (string.equals("3.0"))
+            if (string.equals(DANGEROUS_LEVEL))
                 dangerousPointIndexList.add(safetyLevelString.indexOf(string));
         }
         return dangerousPointIndexList;
@@ -654,7 +712,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 List<String> safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
                 drawRoutePolyLine(safetyLevels);
                 recenterCameraAfterDisplayingRoute();
-                addAllMilestone(getMilstoneStepIndex(safetyLevels));
+                //addAllMilestone(getMilstoneStepIndex(safetyLevels));
                 startNavigationButton.setEnabled(true);
                 startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
             } catch (IOException e) {
@@ -681,6 +739,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .accessToken(Mapbox.getAccessToken())
                 .origin(origin)
                 .destination(destination)
+                .voiceUnits(DirectionsCriteria.METRIC)
                 .build()
                 .getRoute(new Callback<DirectionsResponse>() {
                     @Override
@@ -934,12 +993,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     @Override
     public void onProgressChange(Location location, RouteProgress routeProgress) {
-
+        mapboxMap.getLocationComponent().forceLocationUpdate(location);
     }
 
     @Override
     public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
-
+        //playAnnouncement(milestone);
     }
 
     private static class MainActivityLocationCallback
@@ -1035,7 +1094,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
-        navigation.onDestroy();
+        //navigation.onDestroy();
+        // Ensure proper shutdown of the SpeechPlayer
+        /*if (speechPlayer != null) {
+            speechPlayer.onDestroy();
+        }*/
     }
 
     @Override
