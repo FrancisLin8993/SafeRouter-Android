@@ -1,6 +1,8 @@
 package com.example.saferouter.utils;
 
+import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
+import com.mapbox.geojson.utils.PolylineUtils;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -63,5 +65,20 @@ public class Utils {
             safetyLevelList.add(stringsOfLevels[i]);
         }
         return safetyLevelList;
+    }
+
+    /**
+     * Retrieve coordinates from the geometry attributes of the response route.
+     *
+     * @param directionsRoute
+     * @return
+     */
+    public static List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute) {
+        List<Point> points = new ArrayList<>();
+        if (directionsRoute != null) {
+            String encodedPolyline = directionsRoute.geometry();
+            points = PolylineUtils.decode(encodedPolyline, 6);
+        }
+        return points;
     }
 }

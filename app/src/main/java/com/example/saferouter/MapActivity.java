@@ -10,13 +10,11 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,6 +22,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.example.saferouter.network.SafetyLevelApiInterface;
@@ -35,11 +34,9 @@ import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
-import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
-import com.mapbox.geojson.utils.PolylineUtils;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -66,6 +63,8 @@ import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOURS;
+import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOUR_MAP;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
@@ -78,34 +77,12 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
 import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher;
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions;
-import com.mapbox.services.android.navigation.ui.v5.voice.NavigationSpeechPlayer;
-import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement;
-import com.mapbox.services.android.navigation.ui.v5.voice.SpeechPlayerProvider;
-import com.mapbox.services.android.navigation.ui.v5.voice.VoiceInstructionLoader;
-import com.mapbox.services.android.navigation.v5.instruction.Instruction;
 import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine;
-import com.mapbox.services.android.navigation.v5.milestone.Milestone;
-import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener;
-import com.mapbox.services.android.navigation.v5.milestone.RouteMilestone;
-import com.mapbox.services.android.navigation.v5.milestone.Trigger;
-import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
-import com.mapbox.services.android.navigation.v5.milestone.VoiceInstructionMilestone;
-import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation;
-import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions;
-import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
-import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener;
-import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress;
-import com.mapbox.turf.TurfClassification;
-import com.mapbox.turf.TurfConstants;
-import com.mapbox.turf.TurfMeasurement;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import okhttp3.Cache;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
@@ -121,7 +98,7 @@ import android.view.View;
 /**
  * Activity of the Mapbox related features.
  */
-public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener, NavigationEventListener, ProgressChangeListener, MilestoneEventListener {
+public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener {
     // variables for adding location layer
     private MapView mapView;
     private MapboxMap mapboxMap;
@@ -131,6 +108,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     // variables for calculating and drawing a route
     private DirectionsRoute currentRoute;
     private String safetyLevelResponseString;
+    private List<String> safetyLevels;
     private static final String TAG = "MapActivity";
     private List<Point> pointsOfRoute;
     @BindView(R.id.origin_search_bar)
@@ -148,43 +126,28 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Point originPoint;
     private Point destinationPoint;
     //private LatLngBounds latLngBoundsMelbourne;
-    //private MapboxNavigation navigation;
     ReplayRouteLocationEngine replayEngine;
     private LocationEngine locationEngine;
-    //private NavigationSpeechPlayer speechPlayer;
     // Variables needed to listen to location updates
     private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
     private List<Feature> greenFeatureList = new ArrayList<>();
     private List<Feature> yellowFeatureList = new ArrayList<>();
     private List<Feature> redFeatureList = new ArrayList<>();
     //Constants
-    private final int[] SAFETY_LEVEL_COLOURS = new int[]{R.color.routeGreen, R.color.routeYellow, R.color.routeRed};
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
     private final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
     private final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
-    private final String SAFE_LEVEL = "1.0";
-    private final String MEDIUM_LEVEL = "2.0";
-    private final String DANGEROUS_LEVEL = "3.0";
+
     private final LatLngBounds BBOX_MELBOURNE = new LatLngBounds.Builder()
             .include(new LatLng(-38.2250, 145.5498))
             .include(new LatLng(-37.5401, 144.5532))
             .build();
     private final int AUTO_COMPLETE_LIST_LIMIT = 5;
     private final String PLACE_SEARCH_COUNTRY = "AU";
-    private final int DISTANCE_TO_VOICE_ALERT_POINT = 500;
     private final String NO_ROUTES_ERROR_MESSAGE = "No routes found";
     private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
-    private final Map<String, Integer> SAFETY_LEVEL_COLOUR_MAP = new HashMap<String, Integer>() {
-        {
-            put(SAFE_LEVEL, R.color.routeGreen);
-            put(MEDIUM_LEVEL, R.color.routeYellow);
-            put(DANGEROUS_LEVEL, R.color.routeRed);
-        }
-    };
-    private final String VOICE_ALERT_MESSAGE = "Dangerous section ahead. Please drive safely.";
-    private static final String COMPONENT_NAVIGATION_INSTRUCTION_CACHE = "component-navigation-instruction-cache";
-    private static final long TEN_MEGABYTE_CACHE_SIZE = 10 * 1024 * 1024;
 
+    private ListView listView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,10 +158,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
-        /*MapboxNavigationOptions options = MapboxNavigationOptions.builder()
-                .isDebugLoggingEnabled(true)
-                .build();
-        navigation = new MapboxNavigation(this, Mapbox.getAccessToken(), options);*/
     }
 
     @Override
@@ -223,22 +182,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
-                // For voice instructions
-                //initializeSpeechPlayer();
             }
         });
     }
-
-    /*private void initializeSpeechPlayer() {
-        String english = Locale.US.getLanguage();
-        Cache cache = new Cache(new File(getApplication().getCacheDir(), COMPONENT_NAVIGATION_INSTRUCTION_CACHE),
-                TEN_MEGABYTE_CACHE_SIZE);
-        VoiceInstructionLoader voiceInstructionLoader = new VoiceInstructionLoader(getApplication(),
-                Mapbox.getAccessToken(), cache);
-        SpeechPlayerProvider speechPlayerProvider = new SpeechPlayerProvider(getApplication(), english, true,
-                voiceInstructionLoader);
-        speechPlayer = new NavigationSpeechPlayer(speechPlayerProvider);
-    }*/
 
     @OnClick(R.id.origin_search_bar)
     public void originSearchBarOnClick(View v) {
@@ -265,32 +211,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         intent.putExtra("navigationRoute", currentRoute);
         intent.putExtra("originPoint", originPoint);
         intent.putExtra("destination", destinationPoint);
+        intent.putExtra("safetyLevels", (Serializable) safetyLevels);
         startActivity(intent);
-
-        /*navigation.addNavigationEventListener(this);
-        navigation.addProgressChangeListener(this);
-        navigation.addMilestoneEventListener(this);
-
-        replayEngine = new ReplayRouteLocationEngine();
-        replayEngine.assign(currentRoute);
-        navigation.setLocationEngine(replayEngine);
-        navigation.startNavigation(currentRoute);*/
-
-        /*((ReplayRouteLocationEngine) locationEngine).assign(currentRoute);
-        navigation.setLocationEngine(locationEngine);
-        mapboxMap.getLocationComponent().setLocationComponentEnabled(true);
-        navigation.startNavigation(currentRoute);*/
-
-        /*boolean simulateRoute = true;
-        NavigationLauncherOptions options = NavigationLauncherOptions.builder()
-                .directionsRoute(currentRoute)
-                .shouldSimulateRoute(simulateRoute)
-                .build();
-        // Call this method with Context from within an Activity
-        NavigationLauncher.startNavigation(MapActivity.this, options);*/
-
-
-
 
     }
 
@@ -353,169 +275,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mapboxMap.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 200));
         }
     }
-
-    /**
-     * Build a custom milstone for voice alert.
-     * @param stepIndex
-     * @return
-     */
-    /*private Milestone buildOneMilestone(int stepIndex) {
-        return new RouteMilestone.Builder()
-                .setIdentifier(stepIndex)
-                .setTrigger(
-                        Trigger.all(
-                                Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex - 1),
-                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, DISTANCE_TO_VOICE_ALERT_POINT)
-                        )
-                ).build();
-    }*/
-
-    private Milestone buildOneMilestone(int stepIndex) {
-        return new RouteMilestone.Builder()
-                .setIdentifier(stepIndex)
-                .setTrigger(
-                        Trigger.all(
-                                Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex - 1),
-                                Trigger.lte(TriggerProperty.STEP_DISTANCE_REMAINING_METERS, DISTANCE_TO_VOICE_ALERT_POINT)
-                        )
-                ).build();
-    }
-
-
-
-    /*private void addAllMilestone(List<Integer> milestoneStepIndexList){
-        for (Integer stepIndex : milestoneStepIndexList){
-            navigation.addMilestone(buildOneMilestone(stepIndex));
-        }
-    }*/
-
-    /*private void playAnnouncement(Milestone milestone) {
-        if (milestone instanceof RouteMilestone) {
-            SpeechAnnouncement announcement = SpeechAnnouncement.builder()
-                    .announcement(VOICE_ALERT_MESSAGE)
-                    .build();
-            speechPlayer.play(announcement);
-        }
-    }*/
-
-    /**
-     *
-     * @param safetyLevelString
-     * @return
-     */
-    private List<Integer> getMilstoneStepIndex(List<String> safetyLevelString) {
-        List<Integer> milestoneStepIndexList = new ArrayList<>();
-
-        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelString);
-
-        List<Point> stepsPointList = getTheStepPointsFromCurrentRoute();
-
-        for (Integer integer : dangerousPointIndexList) {
-            Point dangerousPoint = pointsOfRoute.get(integer);
-            Point nearestStepPoint = getTheNearestStepPointOfDangerousPoint(dangerousPoint, stepsPointList);
-            Map<Integer, Double> stepIndexAndDistanceMap = getStepIndexWhereDangerousPointIn(dangerousPoint, nearestStepPoint, stepsPointList);
-            int milesonteStepIndex = evaluateStepIndex(dangerousPoint, stepIndexAndDistanceMap);
-
-            milestoneStepIndexList.add(milesonteStepIndex);
-
-        }
-
-        return milestoneStepIndexList;
-    }
-
-    /**
-     * Get the nearest step point from the dangerous point.
-     *
-     * @param dangerousPoint
-     * @param stepPoints
-     * @return
-     */
-    private Point getTheNearestStepPointOfDangerousPoint(Point dangerousPoint, List<Point> stepPoints) {
-        return TurfClassification.nearestPoint(dangerousPoint, stepPoints);
-    }
-
-    /**
-     * Get the distance between two points
-     *
-     * @param dangerousPoint
-     * @param stepPoint
-     * @return
-     */
-    private double calculateDistanceBetweenTwoPoint(Point dangerousPoint, Point stepPoint) {
-        return TurfMeasurement.distance(dangerousPoint, stepPoint, TurfConstants.UNIT_METRES);
-    }
-
-    /**
-     * Get the nearest step index and the distance from a dangerous point.
-     *
-     * @param dangerousPoint
-     * @param stepPoints
-     * @return
-     */
-    private Map<Integer, Double> getStepIndexWhereDangerousPointIn(Point dangerousPoint, Point nearestStepPoint, List<Point> stepPoints) {
-        Map<Integer, Double> stepIndexAndDistanceMap = new HashMap<>();
-
-        double distance = calculateDistanceBetweenTwoPoint(dangerousPoint, nearestStepPoint);
-        int stepIndex = stepPoints.indexOf(nearestStepPoint);
-
-        stepIndexAndDistanceMap.put(stepIndex, distance);
-        return stepIndexAndDistanceMap;
-    }
-
-    /**
-     * evaluate whether a dangerous point is in the given step. If true, yes. If not, in the previous step.
-     *
-     * @param dangerousPoint
-     * @param stepIndexAndDistanceMap
-     * @return
-     */
-    private int evaluateStepIndex(Point dangerousPoint, Map stepIndexAndDistanceMap) {
-
-        int stepIndex = (int) stepIndexAndDistanceMap.keySet().toArray()[0];
-
-        double distanceofNextStep = calculateDistanceBetweenTwoPoint(dangerousPoint, pointsOfRoute.get(stepIndex + 1));
-
-        LegStep step = currentRoute.legs().get(0).steps().get(stepIndex);
-
-        if (distanceofNextStep + (double) stepIndexAndDistanceMap.get(stepIndex) == step.distance())
-            return stepIndex;
-        else
-            return stepIndex - 1;
-    }
-
-
-    /**
-     * Get all the point index of dangerous points from the current route
-     *
-     * @param safetyLevelString
-     * @return
-     */
-    private List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
-        List<Integer> dangerousPointIndexList = new ArrayList<>();
-        for (String string : safetyLevelString) {
-            if (string.equals(DANGEROUS_LEVEL))
-                dangerousPointIndexList.add(safetyLevelString.indexOf(string));
-        }
-        return dangerousPointIndexList;
-    }
-
-    /**
-     * Get all the starting points of steps in the route
-     *
-     * @return
-     */
-    private List<Point> getTheStepPointsFromCurrentRoute() {
-        List<Point> stepPoints = new ArrayList<>();
-
-        List<LegStep> legSteps = currentRoute.legs().get(0).steps();
-
-        for (LegStep step : legSteps) {
-            stepPoints.add(step.maneuver().location());
-        }
-
-        return stepPoints;
-    }
-
 
     /**
      * Receive location result and display the destination and route
@@ -709,7 +468,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             try {
                 safetyLevelResponseString = response.body().string();
-                List<String> safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
+                safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
                 drawRoutePolyLine(safetyLevels);
                 recenterCameraAfterDisplayingRoute();
                 //addAllMilestone(getMilstoneStepIndex(safetyLevels));
@@ -758,11 +517,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         currentRoute = response.body().routes().get(0);
 
                         //Collect the coordinates on the route
-                        pointsOfRoute = getPointsOfRoutes(currentRoute);
+                        pointsOfRoute = Utils.getPointsOfRoutes(currentRoute);
                         String coordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
 
                         //Request for safety levels of different sections of the returned route.
                         getSafetyLevel(coordinatesString, safetyLevelCallback);
+
 
                     }
 
@@ -790,20 +550,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    /**
-     * Retrieve coordinates from the geometry attributes of the response route.
-     *
-     * @param directionsRoute
-     * @return
-     */
-    private List<Point> getPointsOfRoutes(DirectionsRoute directionsRoute) {
-        List<Point> points = new ArrayList<>();
-        if (directionsRoute != null) {
-            String encodedPolyline = directionsRoute.geometry();
-            points = PolylineUtils.decode(encodedPolyline, 6);
-        }
-        return points;
-    }
+
 
     /**
      * Remove line layers and sources
@@ -986,21 +733,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         locationEngine.getLastLocation(callback);
     }
 
-    @Override
-    public void onRunning(boolean running) {
-
-    }
-
-    @Override
-    public void onProgressChange(Location location, RouteProgress routeProgress) {
-        mapboxMap.getLocationComponent().forceLocationUpdate(location);
-    }
-
-    @Override
-    public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
-        //playAnnouncement(milestone);
-    }
-
     private static class MainActivityLocationCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
@@ -1094,11 +826,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
-        //navigation.onDestroy();
-        // Ensure proper shutdown of the SpeechPlayer
-        /*if (speechPlayer != null) {
-            speechPlayer.onDestroy();
-        }*/
     }
 
     @Override
