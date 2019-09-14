@@ -51,12 +51,25 @@
             android:textColor="@color/mapboxWhite"
             />
 
-        <com.mapbox.mapboxsdk.maps.MapView
-            android:id="@+id/mapView"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            mapbox:mapbox_cameraZoom="14"
-            />
+            android:layout_height="match_parent">
+            <com.mapbox.mapboxsdk.maps.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                mapbox:mapbox_cameraZoom="14"
+                />
+
+            <ListView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                android:id="@+id/list_view"
+                >
+            </ListView>
+        </RelativeLayout>
+
     </LinearLayout>
 
 
@@ -84,6 +97,13 @@
             android:layout_weight="1"
             android:text="@string/clear_route"
             />
+
+        <Button
+            android:id="@+id/button_go_to_list"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/go_to_list"/>
 
     </LinearLayout>
 
