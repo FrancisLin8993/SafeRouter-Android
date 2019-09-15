@@ -61,13 +61,18 @@
                 mapbox:mapbox_cameraZoom="14"
                 />
 
-            <ListView
+            <!--<ListView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone"
                 android:id="@+id/list_view"
                 >
-            </ListView>
+            </ListView>-->
+            <android.support.v7.widget.RecyclerView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/route_recycler_view"
+                android:visibility="gone" />
         </RelativeLayout>
 
     </LinearLayout>

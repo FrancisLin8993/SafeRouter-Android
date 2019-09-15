@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,12 +24,16 @@ import java.util.UUID;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
+import com.example.saferouter.model.RouteInfoItem;
 import com.example.saferouter.network.SafetyLevelApiInterface;
 import com.example.saferouter.utils.Utils;
 import com.mancj.materialsearchbar.MaterialSearchBar;
@@ -156,13 +161,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static final String ROUTE_SOURCE_ID = "route-source-id";
 
     //Variables needed in alternative route list
-    private List<HashMap<String, String>> routeItemMapList;
+    /*private List<HashMap<String, String>> routeItemMapList;
     private SimpleAdapter routeListAdapter;
     @BindView(R.id.list_view)
-    ListView routeListView;
+    ListView routeListView;*/
     private List<Double> routeDurationDoubleList = new ArrayList<>();
     private List<Double> routeDistanceDoubleList = new ArrayList<>();
-    private List<BigDecimal> routeSafetyscoreIntList = new ArrayList<>();
+    private List<BigDecimal> routeSafetyscoreBigDecimalList = new ArrayList<>();
 
 
     private List<String> routeDurationStringList = new ArrayList<>();
@@ -175,6 +180,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private int selectedRouteNo;
     private int unselectedRouteNo1;
     private int unselectedRouteNo2;
+
+    //Recycler View
+    private List<RouteInfoItem> routeInfoItemList = new ArrayList<>();
+    @BindView(R.id.route_recycler_view)
+    RecyclerView routeInfoRecyclerView;
+    private RouteInfoItemAdapter routeInfoItemAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -210,7 +221,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 currentCameraPosition = mapboxMap.getCameraPosition();
                 originPoint = getCurrentLocation();
 
-                routeListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                /*routeListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @RequiresApi(api = Build.VERSION_CODES.M)
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -252,13 +263,92 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         chooseItem(selectedRouteNo);
 
                     }
-                });
+                });*/
 
-
+                initRecyclerView();
                 initSource(style);
             }
         });
 
+    }
+
+    private void initRecyclerView(){
+        routeInfoItemAdapter = new RouteInfoItemAdapter(routeInfoItemList);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
+        routeInfoRecyclerView.setLayoutManager(layoutManager);
+        routeInfoRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        routeInfoRecyclerView.addItemDecoration(new DividerItemDecoration(this, LinearLayoutManager.VERTICAL));
+        routeInfoRecyclerView.setAdapter(routeInfoItemAdapter);
+        routeInfoRecyclerView.addOnItemTouchListener(new RecyclerTouchListener(getApplicationContext(), routeInfoRecyclerView, new RecyclerTouchListener.ClickListner() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
+            @Override
+            public void onClick(View view, int position) {
+                //RouteInfoItem routeInfoItem = routeInfoItemList.get(position);
+                selectedRouteNo = position;
+                selectedRoute = currentRouteList.get(selectedRouteNo);
+                pointsOfRoute = Utils.getPointsOfRoutes(selectedRoute);
+                selectedRouteCoordinatesString = Utils.generateCoordinatesJsonString(pointsOfRoute);
+
+                if (currentRouteList.size() >= 2) {
+
+                    if (selectedRouteNo == 0) {
+                        unselectedRouteNo1 = 1;
+                    }
+                    if (selectedRouteNo == 1) {
+                        unselectedRouteNo1 = 0;
+                    }
+
+                    if (currentRouteList.size() >= 3) {
+
+                        if (selectedRouteNo == 0) {
+                            unselectedRouteNo1 = 1;
+                            unselectedRouteNo2 = 2;
+                        }
+                        if (selectedRouteNo == 1) {
+                            unselectedRouteNo1 = 0;
+                            unselectedRouteNo2 = 2;
+                        }
+                        if (selectedRouteNo == 2) {
+                            unselectedRouteNo1 = 0;
+                            unselectedRouteNo2 = 1;
+                        }
+
+                    }
+
+                }
+
+                chooseItem(selectedRouteNo);
+            }
+        }));
+    }
+
+    private void initRouteItemData(){
+        for (int i = 0; i <= currentRouteList.size() - 1; i++){
+            RouteInfoItem item = new RouteInfoItem();
+
+            String routeNo = "Route No. " + String.valueOf(i + 1);
+            item.setRouteNo(routeNo);
+
+            double duration = currentRouteList.get(i).duration();
+            BigDecimal durationInBigDecimal = new BigDecimal(duration);
+            durationInBigDecimal = durationInBigDecimal.divide(new BigDecimal("60"), 1, RoundingMode.HALF_UP);
+            String durationInString = String.valueOf(durationInBigDecimal) + " mins";
+            item.setDuration(durationInString);
+
+            double distance = currentRouteList.get(i).distance();
+            BigDecimal distanceInBigDecimal = new BigDecimal(distance);
+            distanceInBigDecimal = distanceInBigDecimal.divide(new BigDecimal("1000"), 1, RoundingMode.HALF_UP);
+            String distanceInString = String.valueOf(distanceInBigDecimal) + " km";
+            item.setDistance(distanceInString);
+
+            BigDecimal safetyScoreInBigDecimal = routeSafetyscoreBigDecimalList.get(i);
+            String safetyScoreString = "Route Safety Score: " + String.valueOf(safetyScoreInBigDecimal);
+            item.setSafetyScore(safetyScoreString);
+
+            routeInfoItemList.add(item);
+        }
+
+        routeInfoItemAdapter.notifyDataSetChanged();
     }
 
     private void initSource(@NonNull Style loadedMapStyle) {
@@ -286,7 +376,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2);
         drawRoutePolyLine(safetyLevelsListOfRoutes.get(selectedRouteNo));
 
-        routeListView.setVisibility(View.GONE);
+        //routeListView.setVisibility(View.GONE);
+        routeInfoRecyclerView.setVisibility(View.GONE);
         mapView.setVisibility(View.VISIBLE);
         recenterCameraAfterDisplayingRoute();
         startNavigationButton.setEnabled(true);
@@ -344,7 +435,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void goToListButtonOnClick() {
 
         mapView.setVisibility(View.GONE);
-        routeListView.setVisibility(View.VISIBLE);
+        //routeListView.setVisibility(View.VISIBLE);
+        routeInfoRecyclerView.setVisibility(View.VISIBLE);
 
     }
 
@@ -557,7 +649,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         return true;
     }
 
-    private void createAlternativeList() {
+    /*private void createAlternativeList() {
 
         String[] colHEAD = new String[]{"Route No", "Duration", "Distance", "SafetyScore"};
         int[] dataCell = new int[]{R.id.RouteNo, R.id.Duration, R.id.Distance, R.id.SafetyScore};
@@ -569,7 +661,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapRoute1.put("RouteNo", "1");
         mapRoute1.put("Duration", routeDurationStringList.get(0));
         mapRoute1.put("Distance", routeDistanceStringList.get(0));
-        mapRoute1.put("SafetyScore", String.valueOf(routeSafetyscoreIntList.get(0)));
+        mapRoute1.put("SafetyScore", String.valueOf(routeSafetyscoreBigDecimalList.get(0)));
         routeItemMapList.add(mapRoute1);
 
         if (currentRouteList.size() >= 2) {
@@ -577,7 +669,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mapRoute2.put("RouteNo", "2");
             mapRoute2.put("Duration", routeDurationStringList.get(1));
             mapRoute2.put("Distance", routeDistanceStringList.get(1));
-            mapRoute2.put("SafetyScore", String.valueOf(routeSafetyscoreIntList.get(1)));
+            mapRoute2.put("SafetyScore", String.valueOf(routeSafetyscoreBigDecimalList.get(1)));
             routeItemMapList.add(mapRoute2);
         }
 
@@ -586,14 +678,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mapRoute3.put("RouteNo", "3");
             mapRoute3.put("Duration", routeDurationStringList.get(2));
             mapRoute3.put("Distance", routeDistanceStringList.get(2));
-            mapRoute3.put("SafetyScore", String.valueOf(routeSafetyscoreIntList.get(2)));
+            mapRoute3.put("SafetyScore", String.valueOf(routeSafetyscoreBigDecimalList.get(2)));
             routeItemMapList.add(mapRoute3);
         }
 
         routeListAdapter = new SimpleAdapter(this, routeItemMapList, R.layout.route_list_view, colHEAD, dataCell);
         routeListView.setAdapter(routeListAdapter);
 
-    }
+    }*/
 
     /*private void displayOptionList(){
 
@@ -637,7 +729,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
                 for (List<String> safetyLevelsInString : safetyLevelsListOfRoutes) {
                     Utils.convertStringListToBigDecimal(safetyLevelsInString);
-                    routeSafetyscoreIntList.add(Utils.calculateSafetyScore(Utils.convertStringListToBigDecimal(safetyLevelsInString)));
+                    routeSafetyscoreBigDecimalList.add(Utils.calculateSafetyScore(Utils.convertStringListToBigDecimal(safetyLevelsInString)));
                 }
 
 
@@ -651,13 +743,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 }
 
-                createAlternativeList();
+
+
+                initRouteItemData();
+
+                //createAlternativeList();
 
                 //drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2);
                 //drawRoutePolyLine(safetyLevels);
 
 
-                routeListView.setVisibility(View.VISIBLE);
+                //routeListView.setVisibility(View.VISIBLE);
+                routeInfoRecyclerView.setVisibility(View.VISIBLE);
                 mapView.setVisibility(View.GONE);
                 startNavigationButton.setEnabled(false);
 
@@ -780,14 +877,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         }
 
 
-                        if (routeItemMapList != null) {
+                        /*if (routeItemMapList != null) {
                             routeDistanceDoubleList.clear();
                             routeDurationDoubleList.clear();
                             routeDurationStringList.clear();
                             routeDistanceStringList.clear();
-                            routeSafetyscoreIntList.clear();
+                            routeSafetyscoreBigDecimalList.clear();
                             routeItemMapList.clear();
-                        }
+                        }*/
 
                         //Request for safety levels of different sections of the returned route.
                         //getSafetyLevel(selectedRouteCoordinatesString, safetyLevelCallback);
