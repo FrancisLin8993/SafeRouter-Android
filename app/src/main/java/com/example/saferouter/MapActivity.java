@@ -317,6 +317,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         routeInfoRecyclerView.setVisibility(View.GONE);
         mapView.setVisibility(View.VISIBLE);
         clearAllButton.setVisibility(View.VISIBLE);
+        goToListButton.setVisibility(View.VISIBLE);
         goToListButton.setEnabled(true);
         recenterCameraAfterDisplayingRoute();
         startNavigationButton.setEnabled(true);
@@ -641,7 +642,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             try {
                 safetyLevelResponseString = response.body().string();
-                //safetyLevels = Utils.extractSafetyLevelFromResponseString(safetyLevelResponseString);
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
                 for (List<String> safetyLevelsInString : safetyLevelsListOfRoutes) {
                     Utils.convertStringListToBigDecimal(safetyLevelsInString);
@@ -652,9 +652,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 routeInfoRecyclerView.setVisibility(View.VISIBLE);
                 mapView.setVisibility(View.GONE);
+                goToListButton.setVisibility(View.GONE);
                 startNavigationButton.setEnabled(false);
                 startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
                 clearAllButton.setEnabled(false);
+
 
                 recenterCameraAfterDisplayingRoute();
 

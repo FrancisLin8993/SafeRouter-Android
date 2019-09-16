@@ -64,7 +64,7 @@ public class MapActivityTest {
 
     @Test
     public void getCorrectSafetyLevelsForMultipleRoutes(){
-        String safetyLevelResponse = "[[3.0,1.0],[3.0,1.0]]";
+        String safetyLevelResponse = "{\"ratings\":[[3.0,1.0],[3.0,1.0]]";
         List<List<String>> safetyLevelListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponse);
         assertEquals("3.0", safetyLevelListOfRoutes.get(0).get(0));
         assertEquals("1.0", safetyLevelListOfRoutes.get(0).get(1));

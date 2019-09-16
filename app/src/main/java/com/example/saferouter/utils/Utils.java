@@ -116,15 +116,17 @@ public class Utils {
      */
     public static List<List<String>> parseSafetyLevelFromResponse(String jsonResponse) {
         List<List<String>> safetyLevelListOfRoutes = new ArrayList<>();
-        jsonResponse = StringUtils.removeStart(jsonResponse, "[[");
-        jsonResponse = StringUtils.removeEnd(jsonResponse, "]]");
+        jsonResponse = StringUtils.removeStart(jsonResponse, "{\"ratings\":[[");
+        //jsonResponse = StringUtils.removeEnd(jsonResponse, "]]");
         //check if the response string contains safety levels of multiple routes
-        if (jsonResponse.contains("],[")) {
-            String[] stringsOfRoutes = jsonResponse.split("],\\[");
+        String[] ratingsAndScores = jsonResponse.split(",\"scores\":");
+        if (ratingsAndScores[0].contains("],[")) {
+            String[] stringsOfRoutes = ratingsAndScores[0].split("],\\[");
             //As the last value of safety level is not used, neglect the format of the last safety level string
             for (int i = 0; i <= stringsOfRoutes.length - 1; i++) {
                 StringUtils.appendIfMissing(stringsOfRoutes[i], "]");
                 safetyLevelListOfRoutes.add(parseSafetyLevelOfOneRoute(stringsOfRoutes[i]));
+
             }
 
         } else {
