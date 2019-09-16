@@ -129,6 +129,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     Button clearAllButton;
     @BindView(R.id.startButton)
     Button startNavigationButton;
+    @BindView(R.id.button_go_to_list)
+    Button goToListButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -314,6 +316,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         routeInfoRecyclerView.setVisibility(View.GONE);
         mapView.setVisibility(View.VISIBLE);
+        clearAllButton.setVisibility(View.VISIBLE);
+        goToListButton.setEnabled(true);
         recenterCameraAfterDisplayingRoute();
         startNavigationButton.setEnabled(true);
         startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
@@ -365,6 +369,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         hideMarker("destination-symbol-layer-id");
         startNavigationButton.setEnabled(false);
         startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        goToListButton.setVisibility(View.GONE);
+        clearAllButton.setVisibility(View.GONE);
         removeAllCurrentRouteInfo();
     }
 
@@ -373,6 +379,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mapView.setVisibility(View.GONE);
         routeInfoRecyclerView.setVisibility(View.VISIBLE);
+        goToListButton.setEnabled(false);
+        clearAllButton.setVisibility(View.GONE);
         startNavigationButton.setEnabled(false);
         startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
         clearAllButton.setEnabled(false);
