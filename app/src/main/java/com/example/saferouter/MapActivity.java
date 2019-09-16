@@ -131,6 +131,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     Button startNavigationButton;
     @BindView(R.id.button_go_to_list)
     Button goToListButton;
+    @BindView(R.id.button_go_to_map)
+    Button goToMapButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -162,7 +164,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     //Select Routes from list
     private DirectionsRoute selectedRoute;
-    private int selectedRouteNo;
+    private int selectedRouteNo = 3;
     private int unselectedRouteNo1;
     private int unselectedRouteNo2;
 
@@ -318,6 +320,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView.setVisibility(View.VISIBLE);
         clearAllButton.setVisibility(View.VISIBLE);
         goToListButton.setVisibility(View.VISIBLE);
+        goToMapButton.setVisibility(View.GONE);
         goToListButton.setEnabled(true);
         recenterCameraAfterDisplayingRoute();
         startNavigationButton.setEnabled(true);
@@ -380,11 +383,33 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mapView.setVisibility(View.GONE);
         routeInfoRecyclerView.setVisibility(View.VISIBLE);
-        goToListButton.setEnabled(false);
+        goToListButton.setVisibility(View.GONE);
         clearAllButton.setVisibility(View.GONE);
+        goToMapButton.setVisibility(View.VISIBLE);
         startNavigationButton.setEnabled(false);
         startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
         clearAllButton.setEnabled(false);
+
+    }
+
+    @OnClick(R.id.button_go_to_map)
+    public void goToMapButtonOnClick() {
+
+        mapView.setVisibility(View.VISIBLE);
+        routeInfoRecyclerView.setVisibility(View.GONE);
+        goToListButton.setVisibility(View.VISIBLE);
+        goToListButton.setEnabled(true);
+        goToMapButton.setVisibility(View.GONE);
+        if(selectedRouteNo == 0 | selectedRouteNo == 1 | selectedRouteNo == 2) {
+            startNavigationButton.setEnabled(true);
+            startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
+        }
+        else{
+            startNavigationButton.setEnabled(false);
+            startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        }
+        clearAllButton.setVisibility(View.VISIBLE);
+        clearAllButton.setEnabled(true);
 
     }
 
@@ -653,6 +678,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 routeInfoRecyclerView.setVisibility(View.VISIBLE);
                 mapView.setVisibility(View.GONE);
                 goToListButton.setVisibility(View.GONE);
+                goToMapButton.setVisibility(View.VISIBLE);
                 startNavigationButton.setEnabled(false);
                 startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
                 clearAllButton.setEnabled(false);
@@ -693,7 +719,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             lineCap(Property.LINE_CAP_ROUND),
                             lineJoin(Property.LINE_JOIN_ROUND),
                             lineWidth(8f),
-                            lineColor("##5e7be5")
+                            lineColor("#696b6a")
                     ));
                 });
             }
@@ -715,7 +741,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                                 lineCap(Property.LINE_CAP_ROUND),
                                 lineJoin(Property.LINE_JOIN_ROUND),
                                 lineWidth(8f),
-                                lineColor("#ade7ed")
+                                lineColor("#696b6a")
                         ));
                     });
                 }

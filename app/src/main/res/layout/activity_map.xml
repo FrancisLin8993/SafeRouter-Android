@@ -103,6 +103,14 @@
             android:text="@string/clear_route"
             android:visibility="gone"
             />
+        <Button
+            android:id="@+id/button_go_to_map"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Go to Map"
+            android:visibility="gone"
+            />
 
         <Button
             android:id="@+id/button_go_to_list"
