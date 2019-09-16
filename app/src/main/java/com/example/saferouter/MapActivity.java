@@ -158,13 +158,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
     private static final String ROUTE_LAYER_ID = "route-layer-id";
     private static final String ROUTE_SOURCE_ID = "route-source-id";
+    private static final int NO_ROUTE_SELECTED = -1;
 
-
-    private List<BigDecimal> routeSafetyscoreBigDecimalList = new ArrayList<>();
+    private List<String> routeSafetyScoreStringList = new ArrayList<>();
 
     //Select Routes from list
     private DirectionsRoute selectedRoute;
-    private int selectedRouteNo = 3;
+    private int selectedRouteNo = NO_ROUTE_SELECTED;
     private int unselectedRouteNo1;
     private int unselectedRouteNo2;
 
@@ -215,7 +215,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
-    private void initRecyclerView(){
+    /**
+     * Initialize recycler view showing the route options.
+     */
+    private void initRecyclerView() {
         routeInfoItemAdapter = new RouteInfoItemAdapter(routeInfoItemList);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         routeInfoRecyclerView.setLayoutManager(layoutManager);
@@ -263,8 +266,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }));
     }
 
-    private void initRouteItemData(){
-        for (int i = 0; i <= currentRouteList.size() - 1; i++){
+    /**
+     * Initialize data in each item in the recycler view.
+     */
+    private void initRouteItemData() {
+        for (int i = 0; i <= currentRouteList.size() - 1; i++) {
             RouteInfoItem item = new RouteInfoItem();
 
             String routeNo = "Route No. " + String.valueOf(i + 1);
@@ -282,8 +288,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             String distanceInString = String.valueOf(distanceInBigDecimal) + " km";
             item.setDistance(distanceInString);
 
-            BigDecimal safetyScoreInBigDecimal = routeSafetyscoreBigDecimalList.get(i);
-            String safetyScoreString = "Route Safety Score: " + String.valueOf(safetyScoreInBigDecimal);
+            String safetyScoreString = "Route Safety Score: " + routeSafetyScoreStringList.get(i);
             item.setSafetyScore(safetyScoreString);
 
             routeInfoItemList.add(item);
@@ -309,6 +314,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         );
         loadedMapStyle.addLayer(routeLayer);
     }
+
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void chooseItem(int selectedRouteNo) {
@@ -400,11 +406,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         goToListButton.setVisibility(View.VISIBLE);
         goToListButton.setEnabled(true);
         goToMapButton.setVisibility(View.GONE);
-        if(selectedRouteNo == 0 | selectedRouteNo == 1 | selectedRouteNo == 2) {
+        if (selectedRouteNo != NO_ROUTE_SELECTED) {
             startNavigationButton.setEnabled(true);
             startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
-        }
-        else{
+        } else {
             startNavigationButton.setEnabled(false);
             startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
         }
@@ -423,21 +428,24 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 locationComponent.getLastKnownLocation().getLatitude());
     }
 
-    public void removeAllCurrentRouteInfo(){
-        if (currentRouteList != null){
+    /**
+     * Remove all the data in the route related object.
+     */
+    public void removeAllCurrentRouteInfo() {
+        if (currentRouteList != null) {
             currentRouteList.clear();
         }
 
-        if (pointsOfRouteList != null){
+        if (pointsOfRouteList != null) {
             pointsOfRouteList.clear();
         }
 
-        if (routeInfoItemList != null){
+        if (routeInfoItemList != null) {
             routeInfoItemList.clear();
         }
 
-        if (routeSafetyscoreBigDecimalList != null){
-            routeSafetyscoreBigDecimalList.clear();
+        if (routeSafetyScoreStringList != null) {
+            routeSafetyScoreStringList.clear();
         }
     }
 
@@ -668,10 +676,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             try {
                 safetyLevelResponseString = response.body().string();
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
-                for (List<String> safetyLevelsInString : safetyLevelsListOfRoutes) {
-                    Utils.convertStringListToBigDecimal(safetyLevelsInString);
-                    routeSafetyscoreBigDecimalList.add(Utils.calculateSafetyScore(Utils.convertStringListToBigDecimal(safetyLevelsInString)));
-                }
+                routeSafetyScoreStringList = Utils.parseSafetyScoreOfRoutesFromResponse(safetyLevelResponseString);
+
 
                 initRouteItemData();
 
@@ -699,6 +705,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     };
 
+    /**
+     * Draw unselected route options on the map
+     * @param unselectedRouteNo1
+     * @param unselectedRouteNo2
+     */
     private void drawAlternativeRoute(int unselectedRouteNo1, int unselectedRouteNo2) {
 
 

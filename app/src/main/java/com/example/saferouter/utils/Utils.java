@@ -4,6 +4,7 @@ import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
 import com.mapbox.geojson.utils.PolylineUtils;
 
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
@@ -73,6 +74,11 @@ public class Utils {
         return stringBuilder.toString();
     }
 
+    /**
+     * Generate the json string for multiple routes to make safety level request
+     * @param pointsOfRouteList
+     * @return
+     */
     public static String generateJsonStringForMultipleRoutes(List<List<Point>> pointsOfRouteList) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("{");
@@ -92,24 +98,7 @@ public class Utils {
     }
 
     /**
-     * Convert the safety level api response to a list of safety level numbers
-     *
-     * @param jsonResponse
-     * @return
-     */
-    public static List<String> extractSafetyLevelFromResponseString(String jsonResponse) {
-        List<String> safetyLevelList = new ArrayList<>();
-        jsonResponse = StringUtils.removeStart(jsonResponse, "[[");
-        jsonResponse = StringUtils.removeEnd(jsonResponse, "]]\\n");
-        String[] stringsOfLevels = jsonResponse.split(",");
-        for (int i = 0; i <= stringsOfLevels.length - 1; i++) {
-            safetyLevelList.add(stringsOfLevels[i]);
-        }
-        return safetyLevelList;
-    }
-
-    /**
-     * Convert safety level response.
+     * Parse safety level of routes from response.
      *
      * @param jsonResponse
      * @return
@@ -117,16 +106,13 @@ public class Utils {
     public static List<List<String>> parseSafetyLevelFromResponse(String jsonResponse) {
         List<List<String>> safetyLevelListOfRoutes = new ArrayList<>();
         jsonResponse = StringUtils.removeStart(jsonResponse, "{\"ratings\":[[");
-        //jsonResponse = StringUtils.removeEnd(jsonResponse, "]]");
-        //check if the response string contains safety levels of multiple routes
         String[] ratingsAndScores = jsonResponse.split(",\"scores\":");
+        //check if the response string contains safety levels of multiple routes
         if (ratingsAndScores[0].contains("],[")) {
             String[] stringsOfRoutes = ratingsAndScores[0].split("],\\[");
-            //As the last value of safety level is not used, neglect the format of the last safety level string
             for (int i = 0; i <= stringsOfRoutes.length - 1; i++) {
                 StringUtils.appendIfMissing(stringsOfRoutes[i], "]");
                 safetyLevelListOfRoutes.add(parseSafetyLevelOfOneRoute(stringsOfRoutes[i]));
-
             }
 
         } else {
@@ -134,6 +120,28 @@ public class Utils {
         }
         return safetyLevelListOfRoutes;
 
+    }
+
+    /**
+     * Parse safety score of routes from the response.
+     * @param jsonResponse
+     * @return
+     */
+    public static List<String> parseSafetyScoreOfRoutesFromResponse(String jsonResponse) {
+        List<String> safetyScoreOfRoutes = new ArrayList<>();
+        jsonResponse = StringUtils.removeStart(jsonResponse, "{\"ratings\":[[");
+        String[] ratingsAndScores = jsonResponse.split(",\"scores\":\\[");
+        String[] safetyscores = ratingsAndScores[1].split("]");
+        if (safetyscores[0].contains(",")){
+            String[] safetyScoreString = safetyscores[0].split(",");
+            for (int i = 0; i <= safetyScoreString.length - 1; i++){
+                safetyScoreOfRoutes.add(safetyScoreString[i]);
+            }
+        } else {
+            safetyScoreOfRoutes.add(safetyscores[0]);
+        }
+
+        return safetyScoreOfRoutes;
     }
 
     /**
@@ -168,16 +176,16 @@ public class Utils {
 
     public static List<Double> convertStringListToBigDecimal(List<String> stringList) {
         List<Double> safetyScoreListInDouble = new ArrayList<>();
-        for (int i = 0; i <= stringList.size() - 2; i++){
+        for (int i = 0; i <= stringList.size() - 2; i++) {
             double safetyScore = Double.parseDouble(stringList.get(i));
             safetyScoreListInDouble.add(safetyScore);
         }
         return safetyScoreListInDouble;
     }
 
-    public static BigDecimal calculateSafetyScore(List<Double> safetyScoreListInDouble){
+    public static BigDecimal calculateSafetyScore(List<Double> safetyScoreListInDouble) {
         double sum = 0.0;
-        for (Double safetyScore : safetyScoreListInDouble){
+        for (Double safetyScore : safetyScoreListInDouble) {
             sum += safetyScore;
         }
 

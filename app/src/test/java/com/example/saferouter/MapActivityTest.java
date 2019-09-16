@@ -71,12 +71,4 @@ public class MapActivityTest {
         assertEquals("3.0", safetyLevelListOfRoutes.get(1).get(0));
         assertEquals("1.0", safetyLevelListOfRoutes.get(1).get(1));
     }
-
-    @Test
-    public void getCorrectSafetyLevels(){
-        String safetyLevelResponse = "[[3.0,1.0]]";
-        List<String> safetyLevelList = Utils.extractSafetyLevelFromResponseString(safetyLevelResponse);
-        assertEquals("3.0", safetyLevelList.get(0));
-
-    }
 }
