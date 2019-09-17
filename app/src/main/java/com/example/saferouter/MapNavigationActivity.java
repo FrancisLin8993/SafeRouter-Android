@@ -111,6 +111,8 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
                         .milestoneEventListener(this)
                         .speechPlayer(speechPlayer);
 
+        navigationView.retrieveNavigationMapboxMap().drawRoute(directionsRoute);
+
 
         navigationView.startNavigation(options.build());
     }

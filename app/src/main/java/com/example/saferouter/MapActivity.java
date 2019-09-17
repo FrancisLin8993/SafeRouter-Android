@@ -47,6 +47,8 @@ import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
+import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions;
+import com.mapbox.mapboxsdk.location.LocationComponentOptions;
 import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -152,6 +154,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             .include(new LatLng(-38.2250, 145.5498))
             .include(new LatLng(-37.5401, 144.5532))
             .build();
+    private final Point MELBOURNE = Point.fromLngLat(144.9631, 37.8136);
     private final int AUTO_COMPLETE_LIST_LIMIT = 5;
     private final String PLACE_SEARCH_COUNTRY = "AU";
     private final String NO_ROUTES_ERROR_MESSAGE = "No routes found";
@@ -206,7 +209,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.setLatLngBoundsForCameraTarget(BBOX_MELBOURNE);
 
                 currentCameraPosition = mapboxMap.getCameraPosition();
-                originPoint = getCurrentLocation();
+
 
                 initRecyclerView();
                 initSource(style);
@@ -372,8 +375,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         removeLayersAndResource();
         originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
-        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(currentCameraPosition));
         originPoint = getCurrentLocation();
+        LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
+        CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
+        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
         destinationPoint = null;
         hideMarker("origin-symbol-layer-id");
         hideMarker("destination-symbol-layer-id");
@@ -424,8 +429,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @return
      */
     private Point getCurrentLocation() {
-        return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
-                locationComponent.getLastKnownLocation().getLatitude());
+        if (locationComponent.getLastKnownLocation() == null){
+            return MELBOURNE;
+        } else {
+            return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
+                    locationComponent.getLastKnownLocation().getLatitude());
+        }
+
     }
 
     /**
@@ -499,6 +509,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
 
                 destinationPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
+
+                if (originPoint == null)
+                    originPoint = getCurrentLocation();
 
                 if (destinationPoint.equals(originPoint))
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
@@ -999,8 +1012,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
             // Activate the MapboxMap LocationComponent to show user location
             // Adding in LocationComponentOptions is also an optional parameter
+            //locationComponent = mapboxMap.getLocationComponent();
+            //locationComponent.activateLocationComponent(this, loadedMapStyle);
+            //Create and customize the LocationComponent's options
+            LocationComponentOptions customLocationComponentOptions = LocationComponentOptions.builder(this)
+                    .build();
+
+            // Get an instance of the component
             locationComponent = mapboxMap.getLocationComponent();
-            locationComponent.activateLocationComponent(this, loadedMapStyle);
+
+            LocationComponentActivationOptions locationComponentActivationOptions =
+                    LocationComponentActivationOptions.builder(this, loadedMapStyle)
+                            .locationComponentOptions(customLocationComponentOptions)
+                            .build();
+
+            // Activate with options
+            locationComponent.activateLocationComponent(locationComponentActivationOptions);
             locationComponent.setLocationComponentEnabled(true);
             // Set the component's camera mode
             locationComponent.setCameraMode(CameraMode.TRACKING);
