@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
@@ -331,9 +332,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         goToListButton.setVisibility(View.VISIBLE);
         goToMapButton.setVisibility(View.GONE);
         goToListButton.setEnabled(true);
+        colourInfoButton.setVisibility(View.VISIBLE);
         recenterCameraAfterDisplayingRoute();
         startNavigationButton.setEnabled(true);
-        startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
+        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
         clearAllButton.setEnabled(true);
     }
 
@@ -370,6 +372,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Clear all displayed routes and move the camera back to user's location
      */
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_clear)
     public void clearAllButtonOnClick() {
         removeLayersAndResource();
@@ -383,12 +386,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         hideMarker("origin-symbol-layer-id");
         hideMarker("destination-symbol-layer-id");
         startNavigationButton.setEnabled(false);
-        startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
+
         goToListButton.setVisibility(View.GONE);
         clearAllButton.setVisibility(View.GONE);
         removeAllCurrentRouteInfo();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_go_to_list)
     public void goToListButtonOnClick() {
 
@@ -397,12 +403,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         goToListButton.setVisibility(View.GONE);
         clearAllButton.setVisibility(View.GONE);
         goToMapButton.setVisibility(View.VISIBLE);
+        colourInfoButton.setVisibility(View.GONE);
         startNavigationButton.setEnabled(false);
-        startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
         clearAllButton.setEnabled(false);
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_go_to_map)
     public void goToMapButtonOnClick() {
 
@@ -410,13 +419,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         routeInfoRecyclerView.setVisibility(View.GONE);
         goToListButton.setVisibility(View.VISIBLE);
         goToListButton.setEnabled(true);
+        colourInfoButton.setVisibility(View.VISIBLE);
         goToMapButton.setVisibility(View.GONE);
         if (selectedRouteNo != NO_ROUTE_SELECTED) {
             startNavigationButton.setEnabled(true);
-            startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
+            //startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
+            startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
+
         } else {
             startNavigationButton.setEnabled(false);
-            startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+            //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+            startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
+
         }
         clearAllButton.setVisibility(View.VISIBLE);
         clearAllButton.setEnabled(true);
@@ -698,8 +712,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapView.setVisibility(View.GONE);
                 goToListButton.setVisibility(View.GONE);
                 goToMapButton.setVisibility(View.VISIBLE);
+                colourInfoButton.setVisibility(View.GONE);
                 startNavigationButton.setEnabled(false);
-                startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+                //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
+                startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
                 clearAllButton.setEnabled(false);
 
 
