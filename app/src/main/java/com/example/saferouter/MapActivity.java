@@ -292,7 +292,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             String distanceInString = String.valueOf(distanceInBigDecimal) + " km";
             item.setDistance(distanceInString);
 
-            String safetyScoreString = "Route Safety Score: " + routeSafetyScoreStringList.get(i);
+            String safetyScoreString = "Route Risk Score: " + routeSafetyScoreStringList.get(i);
             item.setSafetyScore(safetyScoreString);
 
             routeInfoItemList.add(item);
