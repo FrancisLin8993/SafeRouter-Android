@@ -537,10 +537,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
                 setOriginPointMarkerSsource(originPoint);
-                if (!originPoint.equals(getCurrentLocation()))
-                    showMarker("origin-symbol-layer-id");
-                if (destinationPoint != null)
-                    renderRouteOnMap(originPoint, destinationPoint);
+
+                if (destinationPoint.equals(originPoint))
+                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
+                else {
+                    if (!originPoint.equals(getCurrentLocation()))
+                        showMarker("origin-symbol-layer-id");
+                    if (destinationPoint != null)
+                        renderRouteOnMap(originPoint, destinationPoint);
+                }
+
             }
         }
     }
