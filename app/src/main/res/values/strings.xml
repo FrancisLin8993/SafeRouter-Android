@@ -15,5 +15,5 @@
     <string name="origin_init_holder">Your current location</string>
     <string name="destination_init_holder">Search for destination</string>
     <string name="start_navigation">start navigation</string>
-    <string name="go_to_list">Go to List</string>
+    <string name="go_to_list">View Alternatives</string>
 </resources>

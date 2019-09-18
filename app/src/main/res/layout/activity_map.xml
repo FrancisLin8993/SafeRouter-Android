@@ -44,9 +44,8 @@
             android:layout_marginLeft="16dp"
             android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
-            android:backgroundTint="@color/mapboxGrayLight"
-            android:enabled="false"
-            android:visibility="visible"
+            android:backgroundTint="@color/colorPrimary"
+            android:visibility="gone"
             android:text="@string/start_navigation"
             android:textColor="@color/mapboxWhite"
             />
@@ -87,7 +86,7 @@
         mapbox:layout_constraintEnd_toEndOf="parent"
         mapbox:layout_constraintBottom_toBottomOf="parent">
 
-        <Button
+        <!--<Button
             android:id="@+id/button_colour_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -95,19 +94,19 @@
             android:text="@string/colour_info"
             android:textColor="@color/mapboxWhite"
             android:backgroundTint="@color/colorPrimary"
-            />
+            />-->
 
-        <Button
+        <!--<Button
             android:id="@+id/button_clear"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/clear_route"
             android:visibility="gone"
-            />
+            />-->
 
         <Button
-            android:id="@+id/button_go_to_list"
+            android:id="@+id/button_view_alternatives"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"

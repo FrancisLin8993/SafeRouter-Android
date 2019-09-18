@@ -126,14 +126,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @BindView(R.id.destination_search_bar)
     MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
-    @BindView(R.id.button_colour_info)
-    Button colourInfoButton;
-    @BindView(R.id.button_clear)
-    Button clearAllButton;
+    /*@BindView(R.id.button_colour_info)
+    Button colourInfoButton;*/
+    /*@BindView(R.id.button_clear)
+    Button clearAllButton;*/
     @BindView(R.id.startButton)
     Button startNavigationButton;
-    @BindView(R.id.button_go_to_list)
-    Button goToListButton;
+    @BindView(R.id.button_view_alternatives)
+    Button viewAlternativesButton;
     @BindView(R.id.button_go_to_map)
     Button goToMapButton;
     private CameraPosition currentCameraPosition;
@@ -328,15 +328,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         routeInfoRecyclerView.setVisibility(View.GONE);
         mapView.setVisibility(View.VISIBLE);
-        clearAllButton.setVisibility(View.VISIBLE);
-        goToListButton.setVisibility(View.VISIBLE);
+        //clearAllButton.setVisibility(View.VISIBLE);
+        viewAlternativesButton.setVisibility(View.VISIBLE);
         goToMapButton.setVisibility(View.GONE);
-        goToListButton.setEnabled(true);
-        colourInfoButton.setVisibility(View.VISIBLE);
+        viewAlternativesButton.setEnabled(true);
+        //colourInfoButton.setVisibility(View.VISIBLE);
         recenterCameraAfterDisplayingRoute();
-        startNavigationButton.setEnabled(true);
-        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
-        clearAllButton.setEnabled(true);
+        //startNavigationButton.setEnabled(true);
+        //startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
+        //clearAllButton.setEnabled(true);
+        startNavigationButton.setVisibility(View.VISIBLE);
     }
 
     @OnClick(R.id.origin_search_bar)
@@ -351,10 +352,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         redirectToSearchScreen();
     }
 
-    @OnClick(R.id.button_colour_info)
+    /*@OnClick(R.id.button_colour_info)
     public void colorButtonOnClick() {
         showColourInfoDialog();
-    }
+    }*/
 
     @SuppressLint("MissingPermission")
     @OnClick(R.id.startButton)
@@ -372,7 +373,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Clear all displayed routes and move the camera back to user's location
      */
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    /*@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_clear)
     public void clearAllButtonOnClick() {
         removeLayersAndResource();
@@ -389,25 +390,24 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
         startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
 
-        goToListButton.setVisibility(View.GONE);
-        clearAllButton.setVisibility(View.GONE);
+        viewAlternativesButton.setVisibility(View.GONE);
+        //clearAllButton.setVisibility(View.GONE);
         removeAllCurrentRouteInfo();
-    }
+    }*/
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    @OnClick(R.id.button_go_to_list)
+    @OnClick(R.id.button_view_alternatives)
     public void goToListButtonOnClick() {
 
         mapView.setVisibility(View.GONE);
         routeInfoRecyclerView.setVisibility(View.VISIBLE);
-        goToListButton.setVisibility(View.GONE);
-        clearAllButton.setVisibility(View.GONE);
+        viewAlternativesButton.setVisibility(View.GONE);
+        //clearAllButton.setVisibility(View.GONE);
         goToMapButton.setVisibility(View.VISIBLE);
-        colourInfoButton.setVisibility(View.GONE);
-        startNavigationButton.setEnabled(false);
-        //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
-        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
-        clearAllButton.setEnabled(false);
+        //colourInfoButton.setVisibility(View.GONE);
+        //startNavigationButton.setEnabled(false);
+        startNavigationButton.setVisibility(View.GONE);
+        //clearAllButton.setEnabled(false);
 
     }
 
@@ -417,23 +417,21 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mapView.setVisibility(View.VISIBLE);
         routeInfoRecyclerView.setVisibility(View.GONE);
-        goToListButton.setVisibility(View.VISIBLE);
-        goToListButton.setEnabled(true);
-        colourInfoButton.setVisibility(View.VISIBLE);
+        viewAlternativesButton.setVisibility(View.VISIBLE);
+        viewAlternativesButton.setEnabled(true);
+        //colourInfoButton.setVisibility(View.VISIBLE);
         goToMapButton.setVisibility(View.GONE);
         if (selectedRouteNo != NO_ROUTE_SELECTED) {
-            startNavigationButton.setEnabled(true);
-            //startNavigationButton.setBackgroundResource(R.color.mapboxBlue);
-            startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
+            //startNavigationButton.setEnabled(true);
+            startNavigationButton.setVisibility(View.VISIBLE);
 
         } else {
-            startNavigationButton.setEnabled(false);
-            //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
-            startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
+            //startNavigationButton.setEnabled(false);
+            startNavigationButton.setVisibility(View.GONE);
 
         }
-        clearAllButton.setVisibility(View.VISIBLE);
-        clearAllButton.setEnabled(true);
+        //clearAllButton.setVisibility(View.VISIBLE);
+        //clearAllButton.setEnabled(true);
 
     }
 
@@ -710,13 +708,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 routeInfoRecyclerView.setVisibility(View.VISIBLE);
                 mapView.setVisibility(View.GONE);
-                goToListButton.setVisibility(View.GONE);
+                viewAlternativesButton.setVisibility(View.GONE);
                 goToMapButton.setVisibility(View.VISIBLE);
-                colourInfoButton.setVisibility(View.GONE);
-                startNavigationButton.setEnabled(false);
+                //colourInfoButton.setVisibility(View.GONE);
+                //startNavigationButton.setEnabled(false);
+                startNavigationButton.setVisibility(View.GONE);
                 //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
-                startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
-                clearAllButton.setEnabled(false);
+                //clearAllButton.setEnabled(false);
 
 
                 recenterCameraAfterDisplayingRoute();
