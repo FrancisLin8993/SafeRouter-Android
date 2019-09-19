@@ -538,7 +538,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
                 setOriginPointMarkerSsource(originPoint);
 
-                if (destinationPoint.equals(originPoint))
+                if (destinationPoint != null && destinationPoint.equals(originPoint))
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
                 else {
                     if (!originPoint.equals(getCurrentLocation()))
