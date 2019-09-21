@@ -1,6 +1,7 @@
 package com.example.saferouter;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
@@ -691,6 +692,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
     Callback<ResponseBody> safetyLevelCallback = new Callback<ResponseBody>() {
+        @TargetApi(Build.VERSION_CODES.N)
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
