@@ -43,7 +43,7 @@ public class RouteInfoItemAdapter extends RecyclerView.Adapter<RouteInfoItemAdap
     @Override
     public void onBindViewHolder(@NonNull RouteInfoViewHolder routeInfoViewHolder, int i) {
         RouteInfoItem routeInfoItem = routeInfoItemList.get(i);
-        routeInfoViewHolder.safetyScore.setText(routeInfoItem.getSafetyScore());
+        routeInfoViewHolder.safetyScore.setText(routeInfoItem.getRiskScore());
         routeInfoViewHolder.routeNo.setText(routeInfoItem.getRouteNo());
         routeInfoViewHolder.distance.setText(routeInfoItem.getDistance());
         routeInfoViewHolder.duration.setText(routeInfoItem.getDuration());

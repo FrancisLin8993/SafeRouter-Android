@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
@@ -17,6 +16,7 @@ import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -267,18 +267,27 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 }
 
-                chooseItem(selectedRouteNo);
+                onItemSelect(selectedRouteNo);
             }
         }));
     }
 
-    private void showProgress(boolean show){
+    private void showProgress(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void showRouteList(boolean show) {
+        mapView.setVisibility(show ? View.GONE : View.VISIBLE);
+        routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
+        viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
+        goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+        startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
     /**
      * Initialize data in each item in the recycler view.
      */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void initRouteItemData() {
         for (int i = 0; i <= currentRouteList.size() - 1; i++) {
             RouteInfoItem item = new RouteInfoItem();
@@ -299,10 +308,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             item.setDistance(distanceInString);
 
             String safetyScoreString = "Route Risk Score: " + routeSafetyScoreStringList.get(i);
-            item.setSafetyScore(safetyScoreString);
+            item.setRiskScore(safetyScoreString);
 
             routeInfoItemList.add(item);
         }
+
+        routeInfoItemList.sort(Comparator.comparing(item -> item.getRiskScore()));
 
         routeInfoItemAdapter.notifyDataSetChanged();
     }
@@ -327,23 +338,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void chooseItem(int selectedRouteNo) {
+    private void onItemSelect(int selectedRouteNo) {
         removeLayersAndResource();
         drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2);
         drawRoutePolyLine(safetyLevelsListOfRoutes.get(selectedRouteNo));
-
-        routeInfoRecyclerView.setVisibility(View.GONE);
-        mapView.setVisibility(View.VISIBLE);
-        //clearAllButton.setVisibility(View.VISIBLE);
-        viewAlternativesButton.setVisibility(View.VISIBLE);
-        goToMapButton.setVisibility(View.GONE);
-        viewAlternativesButton.setEnabled(true);
-        //colourInfoButton.setVisibility(View.VISIBLE);
         recenterCameraAfterDisplayingRoute();
-        //startNavigationButton.setEnabled(true);
-        //startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
-        //clearAllButton.setEnabled(true);
-        startNavigationButton.setVisibility(View.VISIBLE);
+        showRouteList(false);
     }
 
     @OnClick(R.id.origin_search_bar)
@@ -400,34 +400,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         //clearAllButton.setVisibility(View.GONE);
         removeAllCurrentRouteInfo();
     }*/
-
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_view_alternatives)
     public void goToListButtonOnClick() {
-
-        mapView.setVisibility(View.GONE);
-        routeInfoRecyclerView.setVisibility(View.VISIBLE);
-        viewAlternativesButton.setVisibility(View.GONE);
-        //clearAllButton.setVisibility(View.GONE);
-        goToMapButton.setVisibility(View.VISIBLE);
-        //colourInfoButton.setVisibility(View.GONE);
-        //startNavigationButton.setEnabled(false);
-        startNavigationButton.setVisibility(View.GONE);
-        //clearAllButton.setEnabled(false);
-
+        showRouteList(true);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_go_to_map)
     public void goToMapButtonOnClick() {
 
-        mapView.setVisibility(View.VISIBLE);
-        routeInfoRecyclerView.setVisibility(View.GONE);
-        viewAlternativesButton.setVisibility(View.VISIBLE);
-        viewAlternativesButton.setEnabled(true);
-        //colourInfoButton.setVisibility(View.VISIBLE);
-        goToMapButton.setVisibility(View.GONE);
-        if (selectedRouteNo != NO_ROUTE_SELECTED) {
+        showRouteList(false);
+        startNavigationButton.setVisibility(selectedRouteNo != NO_ROUTE_SELECTED ? View.VISIBLE : View.GONE);
+
+        /*if (selectedRouteNo != NO_ROUTE_SELECTED) {
             //startNavigationButton.setEnabled(true);
             startNavigationButton.setVisibility(View.VISIBLE);
 
@@ -435,7 +421,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             //startNavigationButton.setEnabled(false);
             startNavigationButton.setVisibility(View.GONE);
 
-        }
+        }*/
         //clearAllButton.setVisibility(View.VISIBLE);
         //clearAllButton.setEnabled(true);
 
@@ -447,7 +433,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @return
      */
     private Point getCurrentLocation() {
-        if (locationComponent.getLastKnownLocation() == null){
+        if (locationComponent.getLastKnownLocation() == null) {
             return MELBOURNE;
         } else {
             return Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
@@ -539,7 +525,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 }
 
 
-
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
                 originPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
@@ -555,7 +540,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         showMarker("origin-symbol-layer-id");
                     if (destinationPoint != null)
                         renderRouteOnMap(originPoint, destinationPoint);
-                        showProgress(true);
+                    showProgress(true);
                 }
 
             }
@@ -752,6 +737,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Draw unselected route options on the map
+     *
      * @param unselectedRouteNo1
      * @param unselectedRouteNo2
      */
