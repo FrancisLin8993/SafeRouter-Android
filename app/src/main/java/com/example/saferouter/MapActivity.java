@@ -136,6 +136,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     Button viewAlternativesButton;
     @BindView(R.id.button_go_to_map)
     Button goToMapButton;
+    @BindView(R.id.loading_progress)
+    View progressBar;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -268,6 +270,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 chooseItem(selectedRouteNo);
             }
         }));
+    }
+
+    private void showProgress(boolean show){
+        progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -527,8 +533,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 if (destinationPoint.equals(originPoint))
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
-                else
+                else {
                     renderRouteOnMap(originPoint, destinationPoint);
+                    showProgress(true);
+                }
+
+
 
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
@@ -545,6 +555,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         showMarker("origin-symbol-layer-id");
                     if (destinationPoint != null)
                         renderRouteOnMap(originPoint, destinationPoint);
+                        showProgress(true);
                 }
 
             }
@@ -712,6 +723,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 initRouteItemData();
 
+                showProgress(false);
                 routeInfoRecyclerView.setVisibility(View.VISIBLE);
                 mapView.setVisibility(View.GONE);
                 viewAlternativesButton.setVisibility(View.GONE);
