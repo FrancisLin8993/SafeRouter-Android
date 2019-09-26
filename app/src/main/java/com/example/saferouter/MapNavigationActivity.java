@@ -4,6 +4,7 @@ import android.location.Location;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import com.example.saferouter.model.NavigationDangerousInfoItem;
 import com.example.saferouter.utils.Utils;
 import com.mapbox.api.directions.v5.models.BannerInstructions;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
@@ -12,7 +13,6 @@ import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.services.android.navigation.ui.v5.NavigationContract;
 import com.mapbox.services.android.navigation.ui.v5.NavigationView;
 import com.mapbox.services.android.navigation.ui.v5.NavigationViewOptions;
 import com.mapbox.services.android.navigation.ui.v5.OnNavigationReadyCallback;
@@ -31,19 +31,15 @@ import com.mapbox.services.android.navigation.v5.milestone.RouteMilestone;
 import com.mapbox.services.android.navigation.v5.milestone.StepMilestone;
 import com.mapbox.services.android.navigation.v5.milestone.Trigger;
 import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
-import com.mapbox.services.android.navigation.v5.milestone.VoiceInstructionMilestone;
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener;
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress;
-import com.mapbox.turf.TurfClassification;
 import com.mapbox.turf.TurfConstants;
 import com.mapbox.turf.TurfMeasurement;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -52,7 +48,6 @@ import okhttp3.Route;
 
 import static com.example.saferouter.utils.CommonConstants.COMPONENT_NAVIGATION_INSTRUCTION_CACHE;
 import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
-import static com.example.saferouter.utils.CommonConstants.DISTANCE_TO_VOICE_ALERT_POINT;
 import static com.example.saferouter.utils.CommonConstants.TEN_MEGABYTE_CACHE_SIZE;
 import static com.example.saferouter.utils.CommonConstants.VOICE_ALERT_MESSAGE;
 
@@ -67,7 +62,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     private List<Point> pointsOfRoute;
     private List<String> safetyLevels;
     private List<Milestone> milestoneList = new ArrayList<>();
-    private List<Integer> milestoneIndexList = new ArrayList<>();
+    private List<NavigationDangerousInfoItem> navigationDangerousInfoItemList = new ArrayList<>();
     private NavigationSpeechPlayer speechPlayer;
 
     @BindView(R.id.navigation_view)
@@ -85,7 +80,6 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         directionsRoute = (DirectionsRoute) getIntent().getExtras().get("navigationRoute");
         pointsOfRoute = Utils.getPointsOfRoutes(directionsRoute);
         safetyLevels = (ArrayList<String>) getIntent().getExtras().get("safetyLevels");
-        milestoneIndexList = getMilstoneStepIndex(safetyLevels);
         addAllMilestone();
         initializeSpeechPlayer();
         CameraPosition initialPosition = new CameraPosition.Builder()
@@ -124,51 +118,70 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
      * @return
      */
     private Milestone buildOneMilestone() {
-        /*return new StepMilestone.Builder()
-                .setIdentifier(stepIndex)
-                .setTrigger(
-                        Trigger.all(
-                                Trigger.eq(TriggerProperty.STEP_INDEX, stepIndex)
-                                //Trigger.lte(TriggerProperty.STEP_DISTANCE_TRAVELED_METERS, DISTANCE_TO_VOICE_ALERT_POINT),
-                                //Trigger.gte(TriggerProperty.STEP_DISTANCE_TRAVELED_METERS, 100)
-                        )
-                ).build();*/
         return new StepMilestone.Builder().setTrigger(
                 Trigger.eq(TriggerProperty.NEW_STEP, TriggerProperty.TRUE)
         ).build();
+    }
 
-        /*return new RouteMilestone.Builder()
-                .setIdentifier(1)
+    private Milestone buildOneMilestone(int dangerousInfoItemListIndex, NavigationDangerousInfoItem item) {
+        class dangerousInfoInstruction extends Instruction {
+
+            @Override
+            public String buildInstruction(RouteProgress routeProgress) {
+                return item.getVoiceMessage();
+            }
+        }
+        return new StepMilestone.Builder()
+                .setIdentifier(dangerousInfoItemListIndex + 100)
+                .setInstruction(new dangerousInfoInstruction())
+                .setTrigger(
+                        Trigger.eq(TriggerProperty.NEW_STEP, TriggerProperty.TRUE)
+                ).build();
+    }
+
+    /*private Milestone buildOneMilestone(int dangerousInfoItemListIndex, NavigationDangerousInfoItem item) {
+        return new RouteMilestone.Builder()
+                .setIdentifier(dangerousInfoItemListIndex)
+                .setInstruction(new Instruction() {
+                    @Override
+                    public String buildInstruction(RouteProgress routeProgress) {
+                        return item.getVoiceMessage();
+                    }
+                })
                 .setTrigger(
                         Trigger.all(
-                                Trigger.lt(TriggerProperty.STEP_INDEX, 3),
-                                Trigger.gt(TriggerProperty.STEP_DISTANCE_TOTAL_METERS, 200))).build();*/
-    }
+                                Trigger.eq(TriggerProperty.STEP_INDEX, item.getStepIndex()),
+                                Trigger.gt(TriggerProperty.STEP_DISTANCE_TOTAL_METERS, 200),
+                                Trigger.lte(TriggerProperty.STEP_DISTANCE_TRAVELED_METERS, item.getDistanceToStep()))
+                ).build();
+    }*/
+
 
     /**
      * @param safetyLevelString
      * @return
      */
-    private List<Integer> getMilstoneStepIndex(List<String> safetyLevelString) {
-        List<Integer> milestoneStepIndexList = new ArrayList<>();
+    private void initAllDangerousInfoItem(List<String> safetyLevelString) {
+
 
         List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelString);
 
         List<Point> stepsPointList = getTheStepPointsFromCurrentRoute();
 
-        for (Integer integer : dangerousPointIndexList) {
-            Point dangerousPoint = pointsOfRoute.get(integer);
-            //Point nearestStepPoint = getTheNearestStepPointOfDangerousPoint(dangerousPoint, stepsPointList);
-            //Map<Integer, Double> stepIndexAndDistanceMap = getStepIndexWhereDangerousPointIn(dangerousPoint, nearestStepPoint, stepsPointList);
-            int milesonteStepIndex = getStepIndexOfDangerousPoint(dangerousPoint, stepsPointList);
-            if (!milestoneStepIndexList.contains(milesonteStepIndex)){
-                milestoneStepIndexList.add(milesonteStepIndex);
+        for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
+            Point dangerousPoint = pointsOfRoute.get(dangerousPointIndexList.get(i));
+            int milestoneStepIndex = getStepIndexOfDangerousPoint(dangerousPoint, stepsPointList);
+            double distanceBetweenStepIndexAndDangerousPoint = getDistanceBetweenDangerousPointAndStepPoint(milestoneStepIndex, dangerousPoint, stepsPointList);
+            String voiceMessage = "In " + (int) distanceBetweenStepIndexAndDangerousPoint + " meters, dangerous sections ahead";
+            NavigationDangerousInfoItem item = new NavigationDangerousInfoItem(milestoneStepIndex, distanceBetweenStepIndexAndDangerousPoint, voiceMessage);
+            if ((navigationDangerousInfoItemList.size() == 0) || (navigationDangerousInfoItemList != null && item.getStepIndex() != navigationDangerousInfoItemList.get(navigationDangerousInfoItemList.size() - 1).getStepIndex())) {
+                navigationDangerousInfoItemList.add(item);
             }
-
         }
 
-        return milestoneStepIndexList;
+
     }
+
 
     /**
      * Get the nearest step point from the dangerous point.
@@ -192,43 +205,6 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         return TurfMeasurement.distance(dangerousPoint, stepPoint, TurfConstants.UNIT_METRES);
     }
 
-    /**
-     * Get the nearest step index and the distance from a dangerous point.
-     *
-     * @param dangerousPoint
-     * @param stepPoints
-     * @return
-     *//*
-    private Map<Integer, Double> getStepIndexWhereDangerousPointIn(Point dangerousPoint, Point nearestStepPoint, List<Point> stepPoints) {
-        Map<Integer, Double> stepIndexAndDistanceMap = new HashMap<>();
-
-        double distance = calculateDistanceBetweenTwoPoint(dangerousPoint, nearestStepPoint);
-        int stepIndex = stepPoints.indexOf(nearestStepPoint);
-
-        stepIndexAndDistanceMap.put(stepIndex, distance);
-        return stepIndexAndDistanceMap;
-    }*/
-
-    /**
-     * evaluate whether a dangerous point is in the given step. If true, yes. If not, in the previous step.
-     *
-     * @param dangerousPoint
-     * @param
-     * @return
-     *//*
-    private int evaluateStepIndex(Point dangerousPoint, Map stepIndexAndDistanceMap) {
-
-        int stepIndex = (int) stepIndexAndDistanceMap.keySet().toArray()[0];
-
-        double distanceofNextStep = calculateDistanceBetweenTwoPoint(dangerousPoint, pointsOfRoute.get(stepIndex + 1));
-
-        LegStep step = directionsRoute.legs().get(0).steps().get(stepIndex);
-
-        if (distanceofNextStep + (double) stepIndexAndDistanceMap.get(stepIndex) == step.distance())
-            return stepIndex;
-        else
-            return stepIndex - 1;
-    }*/
     private int getStepIndexOfDangerousPoint(Point dangerousPoint, List<Point> stepsPointList) {
         int stepIndex = 0;
         List<LegStep> legSteps = directionsRoute.legs().get(0).steps();
@@ -242,6 +218,10 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         }
 
         return stepIndex;
+    }
+
+    private double getDistanceBetweenDangerousPointAndStepPoint(int stepIndex, Point dangerousPoint, List<Point> stepsPointList) {
+        return calculateDistanceBetweenTwoPoint(dangerousPoint, stepsPointList.get(stepIndex));
     }
 
     /**
@@ -278,11 +258,10 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
 
     private void addAllMilestone() {
-        /*for (Integer stepIndex : milestoneStepIndexList) {
-            milestoneList.add(buildOneMilestone());
-        }*/
-        //milestoneList.add(buildOneMilestone(3));
-        milestoneList.add(buildOneMilestone());
+        initAllDangerousInfoItem(safetyLevels);
+        for (int i = 0; i <= navigationDangerousInfoItemList.size() - 1; i++) {
+            milestoneList.add(buildOneMilestone(i, navigationDangerousInfoItemList.get(i)));
+        }
     }
 
     private void initializeSpeechPlayer() {
@@ -296,14 +275,13 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         speechPlayer = new NavigationSpeechPlayer(speechPlayerProvider);
     }
 
-    private void playAnnouncement(Milestone milestone) {
+    private void playAnnouncement(Milestone milestone, String instruction) {
         if (milestone instanceof StepMilestone) {
             SpeechAnnouncement announcement = SpeechAnnouncement.builder()
-                    .announcement(VOICE_ALERT_MESSAGE)
+                    .announcement(instruction)
                     .build();
             speechPlayer.play(announcement);
-            System.out.println("announcement played ");
-
+            System.out.println(instruction + " announcement played");
         }
     }
 
@@ -352,8 +330,10 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     @Override
     public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
-        if (milestoneIndexList.contains(routeProgress.currentLegProgress().stepIndex())){
-            playAnnouncement(milestone);
+        if (milestone.getIdentifier() >= 100){
+            if (navigationDangerousInfoItemList.get(milestone.getIdentifier() - 100).getStepIndex() == routeProgress.currentLegProgress().stepIndex()){
+                playAnnouncement(milestone, instruction);
+            }
         }
     }
 
