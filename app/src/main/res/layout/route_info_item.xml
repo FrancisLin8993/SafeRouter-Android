@@ -14,6 +14,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
+        android:id="@+id/recommendationString"
+        android:textSize="18dp"
+        android:textStyle="italic"
+        android:visibility="gone"
+        android:textColor="@color/colorPrimary"
+        />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/recommendationString"
         android:id="@+id/safetyScore"
         android:textSize="16dp"
         android:textStyle="bold"

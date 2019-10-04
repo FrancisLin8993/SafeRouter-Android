@@ -1,13 +1,14 @@
 package com.example.saferouter.model;
 
 public class RouteInfoItem {
-    private String riskScore, routeNo, duration, distance;
+    private String riskScore, routeNo, duration, distance, recommendation;
 
-    public RouteInfoItem(String riskScore, String routeNo, String duration, String distance) {
+    public RouteInfoItem(String riskScore, String routeNo, String duration, String distance, String recommendation) {
         this.riskScore = riskScore;
         this.routeNo = routeNo;
         this.duration = duration;
         this.distance = distance;
+        this.recommendation = recommendation;
     }
 
     public RouteInfoItem() {
@@ -43,5 +44,13 @@ public class RouteInfoItem {
 
     public void setDistance(String distance) {
         this.distance = distance;
+    }
+
+    public String getRecommendation() {
+        return recommendation;
+    }
+
+    public void setRecommendation(String recommendation) {
+        this.recommendation = recommendation;
     }
 }

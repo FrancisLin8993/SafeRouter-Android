@@ -20,7 +20,7 @@ public class RouteInfoItemAdapter extends RecyclerView.Adapter<RouteInfoItemAdap
     }
 
     public class RouteInfoViewHolder extends RecyclerView.ViewHolder{
-        public TextView safetyScore, routeNo, duration, distance;
+        public TextView safetyScore, routeNo, duration, distance, recommendation;
 
         public RouteInfoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -28,6 +28,7 @@ public class RouteInfoItemAdapter extends RecyclerView.Adapter<RouteInfoItemAdap
             routeNo = itemView.findViewById(R.id.routeNo);
             duration = itemView.findViewById(R.id.duration);
             distance = itemView.findViewById(R.id.distance);
+            recommendation = itemView.findViewById(R.id.recommendationString);
         }
     }
 
@@ -47,6 +48,12 @@ public class RouteInfoItemAdapter extends RecyclerView.Adapter<RouteInfoItemAdap
         routeInfoViewHolder.routeNo.setText(routeInfoItem.getRouteNo());
         routeInfoViewHolder.distance.setText(routeInfoItem.getDistance());
         routeInfoViewHolder.duration.setText(routeInfoItem.getDuration());
+        if (routeInfoItem.getRecommendation()!= null){
+            routeInfoViewHolder.recommendation.setText(routeInfoItem.getRecommendation());
+            routeInfoViewHolder.recommendation.setVisibility(View.VISIBLE);
+        } else {
+            routeInfoViewHolder.recommendation.setVisibility(View.GONE);
+        }
     }
 
     @Override

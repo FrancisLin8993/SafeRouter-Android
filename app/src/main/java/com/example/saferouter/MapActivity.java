@@ -36,7 +36,6 @@ import com.example.saferouter.model.RouteInfoItem;
 import com.example.saferouter.network.RoutingAlgorithmApiInterface;
 import com.example.saferouter.network.SafetyLevelApiInterface;
 import com.example.saferouter.utils.Utils;
-import com.google.gson.JsonObject;
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
@@ -80,7 +79,6 @@ import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_M
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOURS;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOUR_MAP;
-import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 import static com.mapbox.core.constants.Constants.PRECISION_6;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
@@ -176,6 +174,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static final String ROUTE_LAYER_ID = "route-layer-id";
     private static final String ROUTE_SOURCE_ID = "route-source-id";
     private static final int NO_ROUTE_SELECTED = -1;
+    private final String RECOMMENDATION_TAG = "SafeRouter Recommendation";
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
 
@@ -362,6 +361,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
 
         routeInfoItemList.sort(Comparator.comparing(item -> item.getRiskScore()));
+
+        routeInfoItemList.get(0).setRecommendation(RECOMMENDATION_TAG);
 
         routeInfoItemAdapter.notifyDataSetChanged();
     }
