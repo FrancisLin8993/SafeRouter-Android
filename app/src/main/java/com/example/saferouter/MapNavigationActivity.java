@@ -1,24 +1,40 @@
 package com.example.saferouter;
 
+import android.annotation.SuppressLint;
 import android.location.Location;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Toast;
 
 import com.example.saferouter.model.NavigationDangerousInfoItem;
 import com.example.saferouter.utils.Utils;
+import com.mapbox.android.core.location.LocationEngine;
+import com.mapbox.android.core.location.LocationEngineCallback;
+import com.mapbox.android.core.location.LocationEngineProvider;
+import com.mapbox.android.core.location.LocationEngineRequest;
+import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.models.BannerInstructions;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
+import com.mapbox.api.directions.v5.models.LegAnnotation;
 import com.mapbox.api.directions.v5.models.LegStep;
+import com.mapbox.api.directions.v5.models.RouteLeg;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.services.android.navigation.ui.v5.NavigationView;
 import com.mapbox.services.android.navigation.ui.v5.NavigationViewOptions;
 import com.mapbox.services.android.navigation.ui.v5.OnNavigationReadyCallback;
+import com.mapbox.services.android.navigation.ui.v5.SoundButton;
 import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener;
 import com.mapbox.services.android.navigation.ui.v5.listeners.InstructionListListener;
 import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener;
+import com.mapbox.services.android.navigation.ui.v5.listeners.RouteListener;
 import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener;
 import com.mapbox.services.android.navigation.ui.v5.voice.NavigationSpeechPlayer;
 import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement;
@@ -27,7 +43,6 @@ import com.mapbox.services.android.navigation.ui.v5.voice.VoiceInstructionLoader
 import com.mapbox.services.android.navigation.v5.instruction.Instruction;
 import com.mapbox.services.android.navigation.v5.milestone.Milestone;
 import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener;
-import com.mapbox.services.android.navigation.v5.milestone.RouteMilestone;
 import com.mapbox.services.android.navigation.v5.milestone.StepMilestone;
 import com.mapbox.services.android.navigation.v5.milestone.Trigger;
 import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
@@ -37,6 +52,7 @@ import com.mapbox.turf.TurfConstants;
 import com.mapbox.turf.TurfMeasurement;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -44,26 +60,31 @@ import java.util.Locale;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import okhttp3.Cache;
-import okhttp3.Route;
 
 import static com.example.saferouter.utils.CommonConstants.COMPONENT_NAVIGATION_INSTRUCTION_CACHE;
 import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
+import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_MILLISECONDS;
+import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.TEN_MEGABYTE_CACHE_SIZE;
-import static com.example.saferouter.utils.CommonConstants.VOICE_ALERT_MESSAGE;
+import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 
 public class MapNavigationActivity extends AppCompatActivity implements OnNavigationReadyCallback,
         NavigationListener, ProgressChangeListener, InstructionListListener, SpeechAnnouncementListener,
-        BannerInstructionsListener, MilestoneEventListener {
+        BannerInstructionsListener, MilestoneEventListener, RouteListener {
 
     private static Point originPoint;
     private static Point destination;
     private static final int INITIAL_ZOOM = 16;
     private DirectionsRoute directionsRoute;
     private List<Point> pointsOfRoute;
-    private List<String> safetyLevels;
+    private List<String> safetyLevelsList;
+    private List<String> navigationRatingsList;
+    private List<String> voiceMessagesList;
     private List<Milestone> milestoneList = new ArrayList<>();
     private List<NavigationDangerousInfoItem> navigationDangerousInfoItemList = new ArrayList<>();
     private NavigationSpeechPlayer speechPlayer;
+    private LocationEngine locationEngine;
+    private NavigationActivityLocationCallback locationCallback = new NavigationActivityLocationCallback(this);
 
     @BindView(R.id.navigation_view)
     NavigationView navigationView;
@@ -79,9 +100,14 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         destination = (Point) getIntent().getExtras().get("destination");
         directionsRoute = (DirectionsRoute) getIntent().getExtras().get("navigationRoute");
         pointsOfRoute = Utils.getPointsOfRoutes(directionsRoute);
-        safetyLevels = (ArrayList<String>) getIntent().getExtras().get("safetyLevels");
+        safetyLevelsList = (ArrayList<String>) getIntent().getExtras().get("safetyLevels");
+        navigationRatingsList = (ArrayList<String>) getIntent().getExtras().get("navigationRatings");
+        navigationRatingsList.remove(0);
+        voiceMessagesList = (ArrayList<String>) getIntent().getExtras().get("voiceMessages");
+        modifyRouteCongestionInfo();
         addAllMilestone();
         initializeSpeechPlayer();
+        //initLocationEngine();
         CameraPosition initialPosition = new CameraPosition.Builder()
                 .target(new LatLng(originPoint.latitude(), destination.longitude()))
                 .zoom(INITIAL_ZOOM)
@@ -89,6 +115,28 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         navigationView.onCreate(savedInstanceState);
         navigationView.initialize(this, initialPosition);
 
+    }
+
+    private void modifyRouteCongestionInfo() {
+        RouteLeg routeLeg = directionsRoute.legs().get(0);
+        LegAnnotation legAnnotation = routeLeg.annotation();
+        LegAnnotation newLegAnnotation = legAnnotation.toBuilder().congestion(navigationRatingsList).build();
+        RouteLeg newRouteLeg = routeLeg.toBuilder().annotation(newLegAnnotation).build();
+        List<RouteLeg> newLegs = new ArrayList<>();
+        newLegs.add(newRouteLeg);
+        directionsRoute = directionsRoute.toBuilder().legs(newLegs).build();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void initLocationEngine() {
+        locationEngine = LocationEngineProvider.getBestLocationEngine(this);
+
+        LocationEngineRequest request = new LocationEngineRequest.Builder(DEFAULT_INTERVAL_IN_MILLISECONDS)
+                .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                .setMaxWaitTime(DEFAULT_MAX_WAIT_TIME).build();
+
+        locationEngine.requestLocationUpdates(request, locationCallback, getMainLooper());
+        locationEngine.getLastLocation(locationCallback);
     }
 
     private void startNavigation() {
@@ -101,12 +149,11 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
                         .instructionListListener(this)
                         .speechAnnouncementListener(this)
                         .bannerInstructionsListener(this)
+                        .routeListener(this)
+                        .locationEngine(locationEngine)
                         .milestones(milestoneList)
                         .milestoneEventListener(this)
                         .speechPlayer(speechPlayer);
-
-        navigationView.retrieveNavigationMapboxMap().drawRoute(directionsRoute);
-
 
         navigationView.startNavigation(options.build());
     }
@@ -172,7 +219,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
             Point dangerousPoint = pointsOfRoute.get(dangerousPointIndexList.get(i));
             int milestoneStepIndex = getStepIndexOfDangerousPoint(dangerousPoint, stepsPointList);
             double distanceBetweenStepIndexAndDangerousPoint = getDistanceBetweenDangerousPointAndStepPoint(milestoneStepIndex, dangerousPoint, stepsPointList);
-            String voiceMessage = "In " + (int) distanceBetweenStepIndexAndDangerousPoint + " meters, dangerous sections ahead";
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(voiceMessagesList.get(dangerousPointIndexList.get(i)));
+            stringBuilder.append("in ");
+            stringBuilder.append((int) distanceBetweenStepIndexAndDangerousPoint);
+            stringBuilder.append(" meters, ");
+            String voiceMessage = stringBuilder.toString();
             NavigationDangerousInfoItem item = new NavigationDangerousInfoItem(milestoneStepIndex, distanceBetweenStepIndexAndDangerousPoint, voiceMessage);
             if ((navigationDangerousInfoItemList.size() == 0) || (navigationDangerousInfoItemList != null && item.getStepIndex() != navigationDangerousInfoItemList.get(navigationDangerousInfoItemList.size() - 1).getStepIndex())) {
                 navigationDangerousInfoItemList.add(item);
@@ -227,9 +279,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     /**
      * Get all the point index of dangerous points from the current route
      *
-     * @param safetyLevelString
+     * @param
      * @return
-     */
+     *//*
     private List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
         List<Integer> dangerousPointIndexList = new ArrayList<>();
         for (int i = 0; i <= safetyLevelString.size() - 1; i++) {
@@ -237,7 +289,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
                 dangerousPointIndexList.add(i);
         }
         return dangerousPointIndexList;
-    }
+    }*/
 
     /**
      * Get all the starting points of steps in the route
@@ -258,7 +310,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
 
     private void addAllMilestone() {
-        initAllDangerousInfoItem(safetyLevels);
+        initAllDangerousInfoItem(safetyLevelsList);
         for (int i = 0; i <= navigationDangerousInfoItemList.size() - 1; i++) {
             milestoneList.add(buildOneMilestone(i, navigationDangerousInfoItemList.get(i)));
         }
@@ -287,9 +339,45 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     @Override
     public void onNavigationReady(boolean isRunning) {
+        navigationView.findViewById(R.id.feedbackFab).setVisibility(View.GONE);
         if (directionsRoute != null) {
             startNavigation();
         }
+    }
+
+    private static class NavigationActivityLocationCallback
+            implements LocationEngineCallback<LocationEngineResult> {
+
+        private final WeakReference<MapNavigationActivity> activityWeakReference;
+
+        NavigationActivityLocationCallback(MapNavigationActivity activity) {
+            this.activityWeakReference = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void onSuccess(LocationEngineResult result) {
+            MapNavigationActivity activity = activityWeakReference.get();
+
+            if (activity != null) {
+                Location location = result.getLastLocation();
+
+                if (location == null) {
+                    return;
+                }
+
+
+            }
+        }
+        @Override
+        public void onFailure(@NonNull Exception exception) {
+            Log.d("LocationChangeActivity", exception.getLocalizedMessage());
+            MapNavigationActivity activity = activityWeakReference.get();
+            if (activity != null) {
+                Toast.makeText(activity, exception.getLocalizedMessage(),
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+
     }
 
     @Override
@@ -330,8 +418,8 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     @Override
     public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
-        if (milestone.getIdentifier() >= 100){
-            if (navigationDangerousInfoItemList.get(milestone.getIdentifier() - 100).getStepIndex() == routeProgress.currentLegProgress().stepIndex()){
+        if (milestone.getIdentifier() >= 100) {
+            if (navigationDangerousInfoItemList.get(milestone.getIdentifier() - 100).getStepIndex() == routeProgress.currentLegProgress().stepIndex()) {
                 playAnnouncement(milestone, instruction);
             }
         }
@@ -388,5 +476,30 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     protected void onSaveInstanceState(Bundle outState) {
         navigationView.onSaveInstanceState(outState);
         super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public boolean allowRerouteFrom(Point offRoutePoint) {
+        return false;
+    }
+
+    @Override
+    public void onOffRoute(Point offRoutePoint) {
+
+    }
+
+    @Override
+    public void onRerouteAlong(DirectionsRoute directionsRoute) {
+
+    }
+
+    @Override
+    public void onFailedReroute(String errorMessage) {
+
+    }
+
+    @Override
+    public void onArrival() {
+
     }
 }

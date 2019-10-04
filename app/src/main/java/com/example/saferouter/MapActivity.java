@@ -76,8 +76,11 @@ import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_MILLISECONDS;
+import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOURS;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOUR_MAP;
+import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 import static com.mapbox.core.constants.Constants.PRECISION_6;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
@@ -108,6 +111,8 @@ import android.util.Log;
 
 import android.view.View;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * Activity of the Mapbox related features.
  */
@@ -122,6 +127,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private List<DirectionsRoute> currentRouteList;
     private String safetyLevelResponseString;
     private List<List<String>> safetyLevelsListOfRoutes;
+    private List<List<String>> navigationRatingsListOfRoutes;
+    private List<List<String>> voiceMessagesListOfRoutes;
     private static final String TAG = "MapActivity";
     private List<Point> pointsOfRoute;
     private List<List<Point>> pointsOfRouteList = new ArrayList<>();
@@ -148,14 +155,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     //private LatLngBounds latLngBoundsMelbourne;
     private LocationEngine locationEngine;
     // Variables needed to listen to location updates
-    private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
+    private MainActivityLocationCallback locationCallback = new MainActivityLocationCallback(this);
     private List<Feature> greenFeatureList = new ArrayList<>();
     private List<Feature> yellowFeatureList = new ArrayList<>();
     private List<Feature> redFeatureList = new ArrayList<>();
     //Constants
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
-    private final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
-    private final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
+    /*private final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
+    private final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;*/
 
     private final LatLngBounds BBOX_MELBOURNE = new LatLngBounds.Builder()
             .include(new LatLng(-38.2250, 145.5498))
@@ -168,7 +175,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
     private static final String ROUTE_LAYER_ID = "route-layer-id";
     private static final String ROUTE_SOURCE_ID = "route-source-id";
-    private static int NO_ROUTE_SELECTED = -1;
+    private static final int NO_ROUTE_SELECTED = -1;
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
 
@@ -244,7 +251,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onClick(View view, int position) {
-                selectedRouteNo = position;
+
+                RouteInfoItem item = routeInfoItemList.get(position);
+                int routeNumber = Integer.parseInt(StringUtils.right(item.getRouteNo(), 1));
+                selectedRouteNo = routeNumber - 1;
                 selectedRoute = currentRouteList.get(selectedRouteNo);
                 pointsOfRoute = Utils.getPointsOfRoutes(selectedRoute);
 
@@ -330,7 +340,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         for (int i = 0; i <= currentRouteList.size() - 1; i++) {
             RouteInfoItem item = new RouteInfoItem();
 
-            String routeNo = "Route No. " + String.valueOf(i + 1);
+            String routeNo = "Route No. " + (i + 1);
             item.setRouteNo(routeNo);
 
             double duration = currentRouteList.get(i).duration();
@@ -380,6 +390,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         removeLayersAndResource();
         drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2, unselectedRouteNo3);
         drawRoutePolyLine(safetyLevelsListOfRoutes.get(selectedRouteNo));
+        //addDangerousPointMarker(safetyLevelsListOfRoutes.get(selectedRouteNo));
         recenterCameraAfterDisplayingRoute();
         showRouteList(false);
     }
@@ -404,16 +415,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @SuppressLint("MissingPermission")
     @OnClick(R.id.startButton)
     public void startNavigationButtonOnClick() {
-
         Intent intent = new Intent(this, MapNavigationActivity.class);
         intent.putExtra("navigationRoute", selectedRoute);
         intent.putExtra("originPoint", originPoint);
         intent.putExtra("destination", destinationPoint);
         intent.putExtra("safetyLevels", (Serializable) safetyLevelsListOfRoutes.get(selectedRouteNo));
+        intent.putExtra("navigationRatings", (Serializable) navigationRatingsListOfRoutes.get(selectedRouteNo));
+        intent.putExtra("voiceMessages", (Serializable) voiceMessagesListOfRoutes.get(selectedRouteNo));
         startActivity(intent);
 
     }
-
+    
     /**
      * Clear all displayed routes and move the camera back to user's location
      */
@@ -630,8 +642,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         setDestinationMarkerSource(destination);
         setOriginPointMarkerSsource(originPoint);
-        NO_ROUTE_SELECTED = -1;
-        selectedRouteNo = NO_ROUTE_SELECTED;
+        /*NO_ROUTE_SELECTED = -1;
+        selectedRouteNo = NO_ROUTE_SELECTED;*/
         removeLayersAndResource();
         getRouteFromMapbox(originPoint, destination);
         //recenterCameraAfterDisplayingRoute();
@@ -675,6 +687,33 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         );
         loadedMapStyle.addLayer(originSymbolLayer);
     }
+
+
+    /*private void addDangerousPointMarker(List<String> safetyLevelList){
+        List<Point> dangerousPoint = new ArrayList<>();
+
+        if (mapboxMap!=null){
+            mapboxMap.getStyle(style -> {
+                style.addImage("dangerous-icon-id",
+                        BitmapFactory.decodeResource(this.getResources(), R.drawable.warning_16));
+                List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelList);
+
+                for (Integer dangerousIndex : dangerousPointIndexList){
+                    dangerousPoint.add(pointsOfRoute.get(dangerousIndex));
+                    GeoJsonSource geoJsonSource = new GeoJsonSource("dangerous-point-id-" + dangerousIndex);
+                    style.addSource(geoJsonSource);
+                    SymbolLayer dangerousSymbolLayer = new SymbolLayer("dangerous-symbol-layer-id" + dangerousIndex, geoJsonSource.getId());
+                    dangerousSymbolLayer.withProperties(
+                            iconImage("dangerous-icon-id"),
+                            iconAllowOverlap(true),
+                            iconIgnorePlacement(true)
+                    );
+                    style.addLayer(dangerousSymbolLayer);
+                    showMarker(dangerousSymbolLayer.getId());
+                }
+            });
+        }
+    }*/
 
     @SuppressWarnings({"MissingPermission"})
     @Override
@@ -721,18 +760,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-            Log.d(TAG, "Response code: " + response.code());
+            Log.d(TAG, "Safety Level Response code: " + response.code());
             if (response.body() == null) {
                 Log.e(TAG, NO_SAFETY_LEVEL_ERROR_MESSAGE);
                 Toast.makeText(MapActivity.this, NO_SAFETY_LEVEL_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
+                showProgress(false);
                 return;
             }
             try {
 
                 safetyLevelResponseString = response.body().string();
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
+                navigationRatingsListOfRoutes = Utils.parseNavigationRatingsFromResponse(safetyLevelResponseString);
                 routeSafetyScoreStringList = Utils.parseSafetyScoreOfRoutesFromResponse(safetyLevelResponseString);
-
+                voiceMessagesListOfRoutes = Utils.parseVoiceAlertMessageFromResponse(safetyLevelResponseString);
 
                 initRouteItemData();
 
@@ -750,7 +791,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             Log.e(TAG, "Error: " + t.getMessage());
             Toast.makeText(MapActivity.this, "No safety levels found", Toast.LENGTH_LONG).show();
-
+            showProgress(false);
         }
     };
 
@@ -929,14 +970,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .getRoute(new Callback<DirectionsResponse>() {
                     @Override
                     public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
-                        Log.d(TAG, "Response code: " + response.code());
+                        Log.d(TAG, "Mapbox Directions Response code: " + response.code());
                         if (response.body() == null) {
                             Log.e(TAG, NO_ROUTES_ERROR_MESSAGE);
                             Toast.makeText(MapActivity.this, NO_ROUTES_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
+                            showProgress(false);
                             return;
                         } else if (response.body().routes().size() < 1) {
                             Log.e(TAG, NO_ROUTES_ERROR_MESSAGE);
                             Toast.makeText(MapActivity.this, NO_ROUTES_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
+                            showProgress(false);
                             return;
                         }
 
@@ -982,6 +1025,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     @Override
                     public void onFailure(Call<DirectionsResponse> call, Throwable throwable) {
                         Log.e(TAG, "Error: " + throwable.getMessage());
+                        showProgress(false);
                     }
 
 
@@ -1195,8 +1239,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
                 .setMaxWaitTime(DEFAULT_MAX_WAIT_TIME).build();
 
-        locationEngine.requestLocationUpdates(request, callback, getMainLooper());
-        locationEngine.getLastLocation(callback);
+        locationEngine.requestLocationUpdates(request, locationCallback, getMainLooper());
+        locationEngine.getLastLocation(locationCallback);
     }
 
     private static class MainActivityLocationCallback
@@ -1279,6 +1323,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     protected void onStop() {
         super.onStop();
+        if (locationEngine != null){
+            locationEngine.removeLocationUpdates(locationCallback);
+        }
         mapView.onStop();
     }
 

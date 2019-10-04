@@ -8,10 +8,10 @@ import com.mapbox.geojson.utils.PolylineUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
 
 /**
  * Miscellaneous methods using in the program.
@@ -121,6 +121,24 @@ public class Utils {
         return stringBuilder.toString();
     }
 
+    public static List<List<String>> parseNavigationRatingsFromResponse(String jsonResponse){
+        List<List<String>> navigationRatingsListOfRoutes = new ArrayList<>();
+        /*jsonResponse = StringUtils.removeStart(jsonResponse, "{\"navigation_ratings\":[[");
+        String[] ratingsAndScores = jsonResponse.split("]],\"ratings\":");*/
+        jsonResponse = StringUtils.substringBetween(jsonResponse, "{\"navigation_ratings\":[[", "]],\"ratings\":");
+        if (jsonResponse.contains("],[")) {
+            String[] stringsOfRoutes = jsonResponse.split("],\\[");
+            for (int i = 0; i <= stringsOfRoutes.length - 1; i++) {
+                StringUtils.appendIfMissing(stringsOfRoutes[i], "]");
+                navigationRatingsListOfRoutes.add(parseResponseValuesOfOneRoute(stringsOfRoutes[i]));
+            }
+
+        } else {
+            navigationRatingsListOfRoutes.add(parseResponseValuesOfOneRoute(jsonResponse));
+        }
+        return navigationRatingsListOfRoutes;
+    }
+
     /**
      * Parse safety level of routes from response.
      *
@@ -129,21 +147,39 @@ public class Utils {
      */
     public static List<List<String>> parseSafetyLevelFromResponse(String jsonResponse) {
         List<List<String>> safetyLevelListOfRoutes = new ArrayList<>();
-        jsonResponse = StringUtils.removeStart(jsonResponse, "{\"ratings\":[[");
-        String[] ratingsAndScores = jsonResponse.split(",\"scores\":");
+        /*jsonResponse = StringUtils.removeStart(jsonResponse, "{\"navigation_ratings\":[[");
+        String[] ratingsAndScores = jsonResponse.split("]],\"ratings\":\\[\\[");
+        String[] safetyRatingsAndScores = ratingsAndScores[1].split("]],\"scores\":\\[");*/
+        jsonResponse = StringUtils.substringBetween(jsonResponse, "\"ratings\":[[", "]],\"scores\"");
         //check if the response string contains safety levels of multiple routes
-        if (ratingsAndScores[0].contains("],[")) {
-            String[] stringsOfRoutes = ratingsAndScores[0].split("],\\[");
+        if (jsonResponse.contains("],[")) {
+            String[] stringsOfRoutes = jsonResponse.split("],\\[");
             for (int i = 0; i <= stringsOfRoutes.length - 1; i++) {
                 StringUtils.appendIfMissing(stringsOfRoutes[i], "]");
-                safetyLevelListOfRoutes.add(parseSafetyLevelOfOneRoute(stringsOfRoutes[i]));
+                safetyLevelListOfRoutes.add(parseResponseValuesOfOneRoute(stringsOfRoutes[i]));
             }
 
         } else {
-            safetyLevelListOfRoutes.add(parseSafetyLevelOfOneRoute(jsonResponse));
+            safetyLevelListOfRoutes.add(parseResponseValuesOfOneRoute(jsonResponse));
         }
         return safetyLevelListOfRoutes;
+    }
 
+    public static List<List<String>> parseVoiceAlertMessageFromResponse(String jsonResponse) {
+        List<List<String>> voiceAlertListOfRoutes = new ArrayList<>();
+        jsonResponse = StringUtils.substringBetween(jsonResponse, "\"voice_alerts\":[[", "]]}");
+        //check if the response string contains safety levels of multiple routes
+        if (jsonResponse.contains("],[")) {
+            String[] stringsOfRoutes = jsonResponse.split("],\\[");
+            for (int i = 0; i <= stringsOfRoutes.length - 1; i++) {
+                StringUtils.appendIfMissing(stringsOfRoutes[i], "]");
+                voiceAlertListOfRoutes.add(parseResponseValuesOfOneRoute(stringsOfRoutes[i]));
+            }
+
+        } else {
+            voiceAlertListOfRoutes.add(parseResponseValuesOfOneRoute(jsonResponse));
+        }
+        return voiceAlertListOfRoutes;
     }
 
     /**
@@ -153,16 +189,17 @@ public class Utils {
      */
     public static List<String> parseSafetyScoreOfRoutesFromResponse(String jsonResponse) {
         List<String> safetyScoreOfRoutes = new ArrayList<>();
-        jsonResponse = StringUtils.removeStart(jsonResponse, "{\"ratings\":[[");
+        /*jsonResponse = StringUtils.removeStart(jsonResponse, "{\"navigation_ratings\":[[");
         String[] ratingsAndScores = jsonResponse.split(",\"scores\":\\[");
-        String[] safetyscores = ratingsAndScores[1].split("]");
-        if (safetyscores[0].contains(",")){
-            String[] safetyScoreString = safetyscores[0].split(",");
+        String[] safetyscores = ratingsAndScores[1].split("]");*/
+        jsonResponse = StringUtils.substringBetween(jsonResponse, ",\"scores\":[", "],\"voice_alerts\"");
+        if (jsonResponse.contains(",")){
+            String[] safetyScoreString = jsonResponse.split(",");
             for (int i = 0; i <= safetyScoreString.length - 1; i++){
                 safetyScoreOfRoutes.add(safetyScoreString[i]);
             }
         } else {
-            safetyScoreOfRoutes.add(safetyscores[0]);
+            safetyScoreOfRoutes.add(jsonResponse);
         }
 
         return safetyScoreOfRoutes;
@@ -174,13 +211,16 @@ public class Utils {
      * @param string
      * @return
      */
-    public static List<String> parseSafetyLevelOfOneRoute(String string) {
-        List<String> safetyLevelList = new ArrayList<>();
+    public static List<String> parseResponseValuesOfOneRoute(String string) {
+        List<String> responseValuesList = new ArrayList<>();
         String[] stringsOfLevels = string.split(",");
         for (int i = 0; i <= stringsOfLevels.length - 1; i++) {
-            safetyLevelList.add(stringsOfLevels[i]);
+            if (stringsOfLevels[i].contains("\"")){
+                stringsOfLevels[i] = RegExUtils.removeAll(stringsOfLevels[i], "\"");
+            }
+            responseValuesList.add(stringsOfLevels[i]);
         }
-        return safetyLevelList;
+        return responseValuesList;
     }
 
 
@@ -201,23 +241,12 @@ public class Utils {
         return points;
     }
 
-    public static List<Double> convertStringListToBigDecimal(List<String> stringList) {
-        List<Double> safetyScoreListInDouble = new ArrayList<>();
-        for (int i = 0; i <= stringList.size() - 2; i++) {
-            double safetyScore = Double.parseDouble(stringList.get(i));
-            safetyScoreListInDouble.add(safetyScore);
+    public static List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
+        List<Integer> dangerousPointIndexList = new ArrayList<>();
+        for (int i = 0; i <= safetyLevelString.size() - 1; i++) {
+            if (safetyLevelString.get(i).equals(DANGEROUS_LEVEL))
+                dangerousPointIndexList.add(i);
         }
-        return safetyScoreListInDouble;
-    }
-
-    public static BigDecimal calculateSafetyScore(List<Double> safetyScoreListInDouble) {
-        double sum = 0.0;
-        for (Double safetyScore : safetyScoreListInDouble) {
-            sum += safetyScore;
-        }
-
-        double safetyScore = sum / (safetyScoreListInDouble.size() - 1);
-
-        return new BigDecimal(safetyScore).setScale(0, RoundingMode.HALF_UP);
+        return dangerousPointIndexList;
     }
 }
