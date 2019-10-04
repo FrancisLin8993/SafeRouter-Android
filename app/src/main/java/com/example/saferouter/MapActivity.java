@@ -316,6 +316,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     private void showProgress(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        originSearchBar.setEnabled(show ? false : true);
+        destinationSearchBar.setEnabled(show ? false : true);
+        viewAlternativesButton.setEnabled(show ? false : true);
+        routeInfoRecyclerView.setClickable(show ? false : true);
+        startNavigationButton.setEnabled(show ? false : true);
+        goToMapButton.setEnabled(show ? false : true);
     }
 
     private void showRouteList(boolean show) {
@@ -558,6 +564,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
                 else {
                     renderRouteOnMap(originPoint, destinationPoint);
+                    routeInfoRecyclerView.setVisibility(View.GONE);
                     showProgress(true);
                 }
 
@@ -577,6 +584,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         showMarker("origin-symbol-layer-id");
                     if (destinationPoint != null){
                         renderRouteOnMap(originPoint, destinationPoint);
+                        routeInfoRecyclerView.setVisibility(View.GONE);
                         showProgress(true);
                     }
                 }
