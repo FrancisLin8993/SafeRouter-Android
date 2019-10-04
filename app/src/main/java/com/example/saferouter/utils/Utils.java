@@ -1,5 +1,6 @@
 package com.example.saferouter.utils;
 
+import com.google.gson.JsonObject;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
 import com.mapbox.geojson.utils.PolylineUtils;
@@ -52,6 +53,29 @@ public class Utils {
                 stringBuilder.append(",");
         }
         stringBuilder.append("]]");
+        stringBuilder.append("\"}");
+        return stringBuilder.toString();
+    }
+
+    /**
+     * Generate the json string for calling safety level api request
+     *
+     * @param points
+     * @return
+     */
+    public static String generateCoordinatesJsonStringForRoutingAlgorithm(List<Point> points) {
+        StringBuilder stringBuilder = new StringBuilder();
+        //Does not need the last coordinate for calling safety level
+        //points.remove(points.size() - 1);
+        stringBuilder.append("{");
+        stringBuilder.append("\"data\":");
+        stringBuilder.append("\"[");
+        for (int i = 0; i <= points.size() - 1; i++) {
+            stringBuilder.append(generateJsonStringForOneCoordinates(points.get(i)));
+            if (i != points.size() - 1)
+                stringBuilder.append(",");
+        }
+        stringBuilder.append("]");
         stringBuilder.append("\"}");
         return stringBuilder.toString();
     }
@@ -158,6 +182,9 @@ public class Utils {
         }
         return safetyLevelList;
     }
+
+
+
 
     /**
      * Retrieve coordinates from the geometry attributes of the response route.

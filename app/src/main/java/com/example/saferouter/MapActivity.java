@@ -33,8 +33,10 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.example.saferouter.model.RouteInfoItem;
+import com.example.saferouter.network.RoutingAlgorithmApiInterface;
 import com.example.saferouter.network.SafetyLevelApiInterface;
 import com.example.saferouter.utils.Utils;
+import com.google.gson.JsonObject;
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
@@ -43,6 +45,7 @@ import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
+import com.mapbox.api.matching.v5.models.MapMatchingResponse;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
 import com.mapbox.mapboxsdk.Mapbox;
@@ -165,7 +168,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
     private static final String ROUTE_LAYER_ID = "route-layer-id";
     private static final String ROUTE_SOURCE_ID = "route-source-id";
-    private static final int NO_ROUTE_SELECTED = -1;
+    private static int NO_ROUTE_SELECTED = -1;
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
 
@@ -174,12 +177,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private int selectedRouteNo = NO_ROUTE_SELECTED;
     private int unselectedRouteNo1;
     private int unselectedRouteNo2;
+    private int unselectedRouteNo3;
 
     //Recycler View
     private List<RouteInfoItem> routeInfoItemList = new ArrayList<>();
     @BindView(R.id.route_recycler_view)
     RecyclerView routeInfoRecyclerView;
     private RouteInfoItemAdapter routeInfoItemAdapter;
+
+    //Routing Algorithm
+    private DirectionsRoute RoutingAlgorithm;
+    //private List<Point> OriginDesPoints;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -264,6 +272,30 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             unselectedRouteNo2 = 1;
                         }
 
+                        if (currentRouteList.size() >=4){
+
+                            if (selectedRouteNo == 0) {
+                                unselectedRouteNo1 = 1;
+                                unselectedRouteNo2 = 2;
+                                unselectedRouteNo3 = 3;
+                            }
+                            if (selectedRouteNo == 1) {
+                                unselectedRouteNo1 = 0;
+                                unselectedRouteNo2 = 2;
+                                unselectedRouteNo3 = 3;
+                            }
+                            if (selectedRouteNo == 2) {
+                                unselectedRouteNo1 = 1;
+                                unselectedRouteNo2 = 0;
+                                unselectedRouteNo3 = 3;
+                            }
+                            if (selectedRouteNo == 3) {
+                                unselectedRouteNo1 = 1;
+                                unselectedRouteNo2 = 2;
+                                unselectedRouteNo3 = 0;
+                            }
+                        }
+
                     }
 
                 }
@@ -281,7 +313,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
-        goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (selectedRouteNo != NO_ROUTE_SELECTED) {
+            goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        else {
+            goToMapButton.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
         startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
@@ -341,7 +378,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void onItemSelect(int selectedRouteNo) {
         removeLayersAndResource();
-        drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2);
+        drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2, unselectedRouteNo3);
         drawRoutePolyLine(safetyLevelsListOfRoutes.get(selectedRouteNo));
         recenterCameraAfterDisplayingRoute();
         showRouteList(false);
@@ -593,7 +630,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         setDestinationMarkerSource(destination);
         setOriginPointMarkerSsource(originPoint);
-
+        NO_ROUTE_SELECTED = -1;
+        selectedRouteNo = NO_ROUTE_SELECTED;
         removeLayersAndResource();
         getRouteFromMapbox(originPoint, destination);
         //recenterCameraAfterDisplayingRoute();
@@ -690,6 +728,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 return;
             }
             try {
+
                 safetyLevelResponseString = response.body().string();
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
                 routeSafetyScoreStringList = Utils.parseSafetyScoreOfRoutesFromResponse(safetyLevelResponseString);
@@ -716,12 +755,89 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     };
 
     /**
+     * Getting our own routing algorithm
+     */
+
+    private void getRoutingAlgorithm(String jsonString, Callback<ResponseBody> callback) {
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(RoutingAlgorithmApiInterface.RoutingAlgorithm_URL)
+                .build();
+
+        RoutingAlgorithmApiInterface OptimizedRoute = retrofit.create(RoutingAlgorithmApiInterface.class);
+
+        RequestBody body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonString);
+        Call<ResponseBody> responseBodyCall = OptimizedRoute.getRoutingAlgorithm(body);
+
+        responseBodyCall.enqueue(callback);
+    }
+
+    Callback<ResponseBody> OptimizedRouteCallback = new Callback<ResponseBody>() {
+        @TargetApi(Build.VERSION_CODES.N)
+        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
+        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+            Log.d(TAG, "routing algorithm Response code: " + response.code());
+            if (response.body() == null) {
+                Log.e(TAG, NO_SAFETY_LEVEL_ERROR_MESSAGE);
+                Toast.makeText(MapActivity.this, NO_SAFETY_LEVEL_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
+                return;
+            }
+            try {
+                MapMatchingResponse  matchingResponse = MapMatchingResponse.fromJson(response.body().string());
+                RoutingAlgorithm = matchingResponse.matchings().get(0).toDirectionRoute();
+                int size = currentRouteList.size();
+                currentRouteList.add(RoutingAlgorithm);
+
+                //Collect the coordinates on the route
+                for (int i = 0; i <= currentRouteList.size() - 1; i++) {
+                    pointsOfRouteList.add(Utils.getPointsOfRoutes(currentRouteList.get(i)));
+                }
+
+                pointsOfRoute = Utils.getPointsOfRoutes(currentRouteList.get(0));
+                String CoordinateStringOfRoutes = Utils.generateJsonStringForMultipleRoutes(pointsOfRouteList);
+
+                if (currentRouteList.size() >= 2) {
+
+                    unselectedRouteNo1 = 1;
+
+                    if (currentRouteList.size() >= 3) {
+
+                        unselectedRouteNo2 = 2;
+
+                        if(currentRouteList.size() >= 4){
+
+                            unselectedRouteNo3 = 3;
+
+                        }
+                    }
+                }
+
+
+
+                //Request for safety levels of different sections of the returned route.
+                getSafetyLevel(CoordinateStringOfRoutes, safetyLevelCallback);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onFailure(Call<ResponseBody> call, Throwable t) {
+            Log.e(TAG, "Error: " + t.getMessage());
+            Toast.makeText(MapActivity.this, "No Routing Algorithm found", Toast.LENGTH_LONG).show();
+
+        }
+    };
+
+    /**
      * Draw unselected route options on the map
      *
      * @param unselectedRouteNo1
      * @param unselectedRouteNo2
      */
-    private void drawAlternativeRoute(int unselectedRouteNo1, int unselectedRouteNo2) {
+    private void drawAlternativeRoute(int unselectedRouteNo1, int unselectedRouteNo2, int unselectedRouteNo3) {
 
 
         if (currentRouteList.size() >= 2) {
@@ -768,6 +884,29 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     });
                 }
 
+                if (currentRouteList.size() >= 4) {
+
+                    if (mapboxMap != null) {
+                        mapboxMap.getStyle(style -> {
+
+
+                            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(currentRouteList.get(unselectedRouteNo3).geometry(), PRECISION_6))});
+                            String lineSourceID = "add-line-source-" + currentRouteList.toString() + UUID.randomUUID().toString();
+                            GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
+
+                            style.addSource(geoJsonSource);
+                            String lineLayerID = "add-line-layer-" + currentRouteList.toString() + UUID.randomUUID().toString();
+                            LineLayer lineLayer = new LineLayer(lineLayerID, lineSourceID);
+                            style.addLayer(lineLayer.withProperties(
+                                    lineCap(Property.LINE_CAP_ROUND),
+                                    lineJoin(Property.LINE_JOIN_ROUND),
+                                    lineWidth(8f),
+                                    lineColor("#696b6a")
+                            ));
+                        });
+                    }
+                }
+
             }
 
         }
@@ -805,6 +944,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                         currentRouteList = response.body().routes();
 
+                        List<Point> OriginDesPoints = new ArrayList<>();
+                        OriginDesPoints.add(origin);
+                        OriginDesPoints.add(destination);
+                        String CoordinateStringOfRoutingAlgorithm = Utils.generateCoordinatesJsonStringForRoutingAlgorithm(OriginDesPoints);
+                        getRoutingAlgorithm(CoordinateStringOfRoutingAlgorithm, OptimizedRouteCallback);
+
+
+                        /*currentRouteList.add(RoutingAlgorithm);
+
                         //Collect the coordinates on the route
                         for (int i = 0; i <= currentRouteList.size() - 1; i++) {
                             pointsOfRouteList.add(Utils.getPointsOfRoutes(currentRouteList.get(i)));
@@ -824,8 +972,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             }
                         }
 
+
+
                         //Request for safety levels of different sections of the returned route.
-                        getSafetyLevel(CoordinateStringOfRoutes, safetyLevelCallback);
+                        getSafetyLevel(CoordinateStringOfRoutes, safetyLevelCallback);*/
 
                     }
 
