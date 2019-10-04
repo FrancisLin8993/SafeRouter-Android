@@ -642,8 +642,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         setDestinationMarkerSource(destination);
         setOriginPointMarkerSsource(originPoint);
-        /*NO_ROUTE_SELECTED = -1;
-        selectedRouteNo = NO_ROUTE_SELECTED;*/
+        selectedRouteNo = NO_ROUTE_SELECTED;
         removeLayersAndResource();
         getRouteFromMapbox(originPoint, destination);
         //recenterCameraAfterDisplayingRoute();
