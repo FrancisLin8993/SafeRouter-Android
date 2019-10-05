@@ -16,11 +16,14 @@ import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
+import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.BannerInstructions;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.api.directions.v5.models.LegAnnotation;
 import com.mapbox.api.directions.v5.models.LegStep;
 import com.mapbox.api.directions.v5.models.RouteLeg;
+import com.mapbox.api.directions.v5.models.RouteOptions;
+import com.mapbox.core.constants.Constants;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
@@ -56,6 +59,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -66,6 +70,7 @@ import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_MILLISECONDS;
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.TEN_MEGABYTE_CACHE_SIZE;
+import static com.example.saferouter.utils.Utils.calculateDistanceBetweenTwoPoint;
 import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 
 public class MapNavigationActivity extends AppCompatActivity implements OnNavigationReadyCallback,
@@ -99,6 +104,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         originPoint = (Point) getIntent().getExtras().get("originPoint");
         destination = (Point) getIntent().getExtras().get("destination");
         directionsRoute = (DirectionsRoute) getIntent().getExtras().get("navigationRoute");
+        addRouteOptions();
         pointsOfRoute = Utils.getPointsOfRoutes(directionsRoute);
         safetyLevelsList = (ArrayList<String>) getIntent().getExtras().get("safetyLevels");
         navigationRatingsList = (ArrayList<String>) getIntent().getExtras().get("navigationRatings");
@@ -125,6 +131,35 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         List<RouteLeg> newLegs = new ArrayList<>();
         newLegs.add(newRouteLeg);
         directionsRoute = directionsRoute.toBuilder().legs(newLegs).build();
+    }
+
+    private void addRouteOptions(){
+        List<Point> coordinates = new ArrayList<>();
+        coordinates.add(originPoint);
+        coordinates.add(destination);
+        RouteOptions routeOptions = directionsRoute.routeOptions();
+        if (routeOptions == null){
+            RouteOptions newRouteOptions = RouteOptions.builder().accessToken(Mapbox.getAccessToken())
+                    .overview(DirectionsCriteria.OVERVIEW_FULL)
+                    .profile(DirectionsCriteria.PROFILE_DRIVING)
+                    .baseUrl(Constants.BASE_API_URL)
+                    .bearings(";")
+                    .annotations(DirectionsCriteria.ANNOTATION_CONGESTION)
+                    .annotations(DirectionsCriteria.ANNOTATION_DISTANCE)
+                    .continueStraight(true)
+                    .coordinates(coordinates)
+                    .geometries(DirectionsCriteria.GEOMETRY_POLYLINE6)
+                    .language("en")
+                    .requestUuid(UUID.randomUUID().toString())
+                    .roundaboutExits(true)
+                    .steps(true)
+                    .user(DirectionsCriteria.PROFILE_DEFAULT_USER)
+                    .voiceInstructions(true)
+                    .bannerInstructions(true)
+                    .voiceUnits(DirectionsCriteria.METRIC)
+                    .build();
+            directionsRoute = directionsRoute.toBuilder().routeOptions(newRouteOptions).voiceLanguage("en-US").build();
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -234,29 +269,6 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     }
 
-
-    /**
-     * Get the nearest step point from the dangerous point.
-     *
-     * @param dangerousPoint
-     * @param stepPoints
-     * @return
-     *//*
-    private Point getTheNearestStepPointOfDangerousPoint(Point dangerousPoint, List<Point> stepPoints) {
-        return TurfClassification.nearestPoint(dangerousPoint, stepPoints);
-    }*/
-
-    /**
-     * Get the distance between two points
-     *
-     * @param dangerousPoint
-     * @param stepPoint
-     * @return
-     */
-    private double calculateDistanceBetweenTwoPoint(Point dangerousPoint, Point stepPoint) {
-        return TurfMeasurement.distance(dangerousPoint, stepPoint, TurfConstants.UNIT_METRES);
-    }
-
     private int getStepIndexOfDangerousPoint(Point dangerousPoint, List<Point> stepsPointList) {
         int stepIndex = 0;
         List<LegStep> legSteps = directionsRoute.legs().get(0).steps();
@@ -275,21 +287,6 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     private double getDistanceBetweenDangerousPointAndStepPoint(int stepIndex, Point dangerousPoint, List<Point> stepsPointList) {
         return calculateDistanceBetweenTwoPoint(dangerousPoint, stepsPointList.get(stepIndex));
     }
-
-    /**
-     * Get all the point index of dangerous points from the current route
-     *
-     * @param
-     * @return
-     *//*
-    private List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
-        List<Integer> dangerousPointIndexList = new ArrayList<>();
-        for (int i = 0; i <= safetyLevelString.size() - 1; i++) {
-            if (safetyLevelString.get(i).equals(DANGEROUS_LEVEL))
-                dangerousPointIndexList.add(i);
-        }
-        return dangerousPointIndexList;
-    }*/
 
     /**
      * Get all the starting points of steps in the route

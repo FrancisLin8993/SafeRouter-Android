@@ -67,6 +67,9 @@ import com.mapbox.mapboxsdk.location.modes.CameraMode;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.plugins.annotation.Symbol;
+import com.mapbox.mapboxsdk.plugins.annotation.SymbolManager;
+import com.mapbox.mapboxsdk.plugins.annotation.SymbolOptions;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.PlaceAutocomplete;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
 import com.mapbox.mapboxsdk.style.layers.Layer;
@@ -79,6 +82,8 @@ import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_M
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOURS;
 import static com.example.saferouter.utils.CommonConstants.SAFETY_LEVEL_COLOUR_MAP;
+import static com.example.saferouter.utils.Utils.calculateDistanceBetweenTwoPoint;
+import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 import static com.mapbox.core.constants.Constants.PRECISION_6;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
@@ -93,6 +98,7 @@ import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
+
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -177,6 +183,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private final String RECOMMENDATION_TAG = "SafeRouter Recommendation";
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
+
+    private SymbolManager symbolManager;
+    private List<Symbol> symbols = new ArrayList<>();
 
     //Select Routes from list
     private DirectionsRoute selectedRoute;
@@ -281,7 +290,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             unselectedRouteNo2 = 1;
                         }
 
-                        if (currentRouteList.size() >=4){
+                        if (currentRouteList.size() >= 4) {
 
                             if (selectedRouteNo == 0) {
                                 unselectedRouteNo1 = 1;
@@ -330,8 +339,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
         if (selectedRouteNo != NO_ROUTE_SELECTED) {
             goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
-        }
-        else {
+        } else {
             goToMapButton.setVisibility(show ? View.GONE : View.VISIBLE);
         }
         startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
@@ -397,7 +405,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         removeLayersAndResource();
         drawAlternativeRoute(unselectedRouteNo1, unselectedRouteNo2, unselectedRouteNo3);
         drawRoutePolyLine(safetyLevelsListOfRoutes.get(selectedRouteNo));
-        //addDangerousPointMarker(safetyLevelsListOfRoutes.get(selectedRouteNo));
         recenterCameraAfterDisplayingRoute();
         showRouteList(false);
     }
@@ -432,7 +439,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         startActivity(intent);
 
     }
-    
+
     /**
      * Clear all displayed routes and move the camera back to user's location
      */
@@ -582,7 +589,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 else {
                     if (!originPoint.equals(getCurrentLocation()))
                         showMarker("origin-symbol-layer-id");
-                    if (destinationPoint != null){
+                    if (destinationPoint != null) {
                         renderRouteOnMap(originPoint, destinationPoint);
                         routeInfoRecyclerView.setVisibility(View.GONE);
                         showProgress(true);
@@ -697,49 +704,50 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-    /*private void addDangerousPointMarker(List<String> safetyLevelList){
-        List<Point> dangerousPoint = new ArrayList<>();
+    private void addDangerousPointMarker(List<String> safetyLevelList) {
 
-        if (mapboxMap!=null){
-            mapboxMap.getStyle(style -> {
-                style.addImage("dangerous-icon-id",
-                        BitmapFactory.decodeResource(this.getResources(), R.drawable.warning_16));
-                List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelList);
+        List<SymbolOptions> options = new ArrayList<>();
+        List<Feature> dangerousFeatureList = new ArrayList<>();
+        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelList);
 
-                for (Integer dangerousIndex : dangerousPointIndexList){
-                    dangerousPoint.add(pointsOfRoute.get(dangerousIndex));
-                    GeoJsonSource geoJsonSource = new GeoJsonSource("dangerous-point-id-" + dangerousIndex);
-                    style.addSource(geoJsonSource);
-                    SymbolLayer dangerousSymbolLayer = new SymbolLayer("dangerous-symbol-layer-id" + dangerousIndex, geoJsonSource.getId());
-                    dangerousSymbolLayer.withProperties(
-                            iconImage("dangerous-icon-id"),
-                            iconAllowOverlap(true),
-                            iconIgnorePlacement(true)
-                    );
-                    style.addLayer(dangerousSymbolLayer);
-                    showMarker(dangerousSymbolLayer.getId());
-                }
-            });
+        for (Integer dangerousIndex : dangerousPointIndexList) {
+            Point dangerousPoint = pointsOfRoute.get(dangerousIndex);
+            dangerousFeatureList.add(Feature.fromGeometry(dangerousPoint));
         }
-    }*/
+
+        for (Feature feature : dangerousFeatureList) {
+            options.add(new SymbolOptions()
+                    .withGeometry((Point) feature.geometry())
+                    .withIconImage("fire-station-11")
+            );
+
+        }
+
+        symbols = symbolManager.create(options);
+    }
 
     @SuppressWarnings({"MissingPermission"})
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
 
-        /*Point destinationPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
-        Point originPoint = Point.fromLngLat(locationComponent.getLastKnownLocation().getLongitude(),
-                locationComponent.getLastKnownLocation().getLatitude());
+        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
+        Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
+        for (int i = 0; i <= dangerousPointIndexList.size() - 2; i++) {
+            int dangerousPointIndex = dangerousPointIndexList.get(i);
+            Point dangerousPoint = pointsOfRoute.get(dangerousPointIndex);
 
-        GeoJsonSource source = mapboxMap.getStyle().getSourceAs("destination-source-id");
-        if (source != null) {
-            source.setGeoJson(Feature.fromGeometry(destinationPoint));
+            double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
+
+            Point nextPoint = pointsOfRoute.get(dangerousPointIndex + 1);
+            double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
+            double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
+            if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
+                String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
+                Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+            }
+
         }
 
-        getRoute(originPoint, destinationPoint);
-
-        button.setEnabled(true);
-        button.setBackgroundResource(R.color.mapboxBlue);*/
         return true;
     }
 
@@ -833,9 +841,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 return;
             }
             try {
-                MapMatchingResponse  matchingResponse = MapMatchingResponse.fromJson(response.body().string());
+                MapMatchingResponse matchingResponse = MapMatchingResponse.fromJson(response.body().string());
                 RoutingAlgorithm = matchingResponse.matchings().get(0).toDirectionRoute();
-                int size = currentRouteList.size();
                 currentRouteList.add(RoutingAlgorithm);
 
                 //Collect the coordinates on the route
@@ -854,14 +861,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                         unselectedRouteNo2 = 2;
 
-                        if(currentRouteList.size() >= 4){
+                        if (currentRouteList.size() >= 4) {
 
                             unselectedRouteNo3 = 3;
 
                         }
                     }
                 }
-
 
 
                 //Request for safety levels of different sections of the returned route.
@@ -875,8 +881,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @Override
         public void onFailure(Call<ResponseBody> call, Throwable t) {
             Log.e(TAG, "Error: " + t.getMessage());
-            Toast.makeText(MapActivity.this, "No Routing Algorithm found", Toast.LENGTH_LONG).show();
-
+            //Toast.makeText(MapActivity.this, "No Routing Algorithm found", Toast.LENGTH_LONG).show();
+            for (int i = 0; i <= currentRouteList.size() - 1; i++) {
+                pointsOfRouteList.add(Utils.getPointsOfRoutes(currentRouteList.get(i)));
+            }
+            String CoordinateStringOfRoutes = Utils.generateJsonStringForMultipleRoutes(pointsOfRouteList);
+            getSafetyLevel(CoordinateStringOfRoutes, safetyLevelCallback);
         }
     };
 
@@ -1331,7 +1341,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     protected void onStop() {
         super.onStop();
-        if (locationEngine != null){
+        if (locationEngine != null) {
             locationEngine.removeLocationUpdates(locationCallback);
         }
         mapView.onStop();

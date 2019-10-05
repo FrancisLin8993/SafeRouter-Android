@@ -4,6 +4,9 @@ import com.google.gson.JsonObject;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
 import com.mapbox.geojson.utils.PolylineUtils;
+import com.mapbox.turf.TurfClassification;
+import com.mapbox.turf.TurfConstants;
+import com.mapbox.turf.TurfMeasurement;
 
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -223,7 +226,16 @@ public class Utils {
         return responseValuesList;
     }
 
-
+    /**
+     * Get the distance between two points
+     *
+     * @param point1
+     * @param point2
+     * @return
+     */
+    public static double calculateDistanceBetweenTwoPoint(Point point1, Point point2) {
+        return TurfMeasurement.distance(point1, point2, TurfConstants.UNIT_METRES);
+    }
 
 
     /**
