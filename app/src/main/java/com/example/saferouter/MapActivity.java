@@ -358,7 +358,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             double duration = currentRouteList.get(i).duration();
             BigDecimal durationInBigDecimal = new BigDecimal(duration);
-            durationInBigDecimal = durationInBigDecimal.divide(new BigDecimal("60"), 1, RoundingMode.HALF_UP);
+            durationInBigDecimal = durationInBigDecimal.divide(new BigDecimal("60"), 0, RoundingMode.HALF_UP);
             String durationInString = String.valueOf(durationInBigDecimal) + " mins";
             item.setDuration(durationInString);
 
