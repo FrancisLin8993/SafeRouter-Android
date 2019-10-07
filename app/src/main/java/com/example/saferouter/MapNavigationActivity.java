@@ -73,10 +73,15 @@ import static com.example.saferouter.utils.CommonConstants.TEN_MEGABYTE_CACHE_SI
 import static com.example.saferouter.utils.Utils.calculateDistanceBetweenTwoPoint;
 import static com.example.saferouter.utils.Utils.getDangerousPointIndexFromCurrentRoute;
 
+/**
+ * An activity for navigation view in the app
+ */
 public class MapNavigationActivity extends AppCompatActivity implements OnNavigationReadyCallback,
         NavigationListener, ProgressChangeListener, InstructionListListener, SpeechAnnouncementListener,
         BannerInstructionsListener, MilestoneEventListener, RouteListener {
 
+    public static final int DANGEROUS_POINT_TRIGGER_DISTANCE_LIMIT = 200;
+    public static final int STEP_MILESTONE_ID_OFFSET = 100;
     private static Point originPoint;
     private static Point destination;
     private static final int INITIAL_ZOOM = 16;
@@ -123,6 +128,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     }
 
+    /**
+     * Change the congestion information in the DirectionsRoute object in order to draw colored polyline
+     * in the navigation view.
+     * Because the route colour in the navigation view is based on congestion information by default.
+     * So we change the congestion information to actually reflect the safety levels.
+     */
     private void modifyRouteCongestionInfo() {
         RouteLeg routeLeg = directionsRoute.legs().get(0);
         LegAnnotation legAnnotation = routeLeg.annotation();
@@ -133,6 +144,11 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         directionsRoute = directionsRoute.toBuilder().legs(newLegs).build();
     }
 
+    /**
+     * For the DirectionsRoute object from our own routing algorithm api,
+     * it does not include the compulsory RouteOption object.
+     * We need to manually add one.
+     */
     private void addRouteOptions(){
         List<Point> coordinates = new ArrayList<>();
         coordinates.add(originPoint);
@@ -162,6 +178,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         }
     }
 
+    /**
+     * Initialize the location engine for this activity.
+     */
     @SuppressLint("MissingPermission")
     private void initLocationEngine() {
         locationEngine = LocationEngineProvider.getBestLocationEngine(this);
@@ -174,6 +193,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         locationEngine.getLastLocation(locationCallback);
     }
 
+    /**
+     * Start navigation process.
+     */
     private void startNavigation() {
         NavigationViewOptions.Builder options =
                 NavigationViewOptions.builder()
@@ -193,18 +215,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         navigationView.startNavigation(options.build());
     }
 
-
     /**
      * Build a custom milestone for voice alert.
-     *
+     * @param dangerousInfoItemListIndex
+     * @param item
      * @return
      */
-    private Milestone buildOneMilestone() {
-        return new StepMilestone.Builder().setTrigger(
-                Trigger.eq(TriggerProperty.NEW_STEP, TriggerProperty.TRUE)
-        ).build();
-    }
-
     private Milestone buildOneMilestone(int dangerousInfoItemListIndex, NavigationDangerousInfoItem item) {
         class dangerousInfoInstruction extends Instruction {
 
@@ -214,32 +230,17 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
             }
         }
         return new StepMilestone.Builder()
-                .setIdentifier(dangerousInfoItemListIndex + 100)
+                //in order to avoid repetitive ids for default milestones, set step mileston id to a large number
+                .setIdentifier(dangerousInfoItemListIndex + STEP_MILESTONE_ID_OFFSET)
                 .setInstruction(new dangerousInfoInstruction())
                 .setTrigger(
                         Trigger.eq(TriggerProperty.NEW_STEP, TriggerProperty.TRUE)
                 ).build();
     }
 
-    /*private Milestone buildOneMilestone(int dangerousInfoItemListIndex, NavigationDangerousInfoItem item) {
-        return new RouteMilestone.Builder()
-                .setIdentifier(dangerousInfoItemListIndex)
-                .setInstruction(new Instruction() {
-                    @Override
-                    public String buildInstruction(RouteProgress routeProgress) {
-                        return item.getVoiceMessage();
-                    }
-                })
-                .setTrigger(
-                        Trigger.all(
-                                Trigger.eq(TriggerProperty.STEP_INDEX, item.getStepIndex()),
-                                Trigger.gt(TriggerProperty.STEP_DISTANCE_TOTAL_METERS, 200),
-                                Trigger.lte(TriggerProperty.STEP_DISTANCE_TRAVELED_METERS, item.getDistanceToStep()))
-                ).build();
-    }*/
-
 
     /**
+     * Initial all dangerous information items for voice alert.
      * @param safetyLevelString
      * @return
      */
@@ -260,15 +261,24 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
             stringBuilder.append((int) distanceBetweenStepIndexAndDangerousPoint);
             stringBuilder.append(" meters, ");
             String voiceMessage = stringBuilder.toString();
-            NavigationDangerousInfoItem item = new NavigationDangerousInfoItem(milestoneStepIndex, distanceBetweenStepIndexAndDangerousPoint, voiceMessage);
-            if ((navigationDangerousInfoItemList.size() == 0) || (navigationDangerousInfoItemList != null && item.getStepIndex() != navigationDangerousInfoItemList.get(navigationDangerousInfoItemList.size() - 1).getStepIndex())) {
-                navigationDangerousInfoItemList.add(item);
+            // if the distance between the dangerous point and the step start point is less than 200 meters, the dangerous voice message will not be triggered.
+            if (distanceBetweenStepIndexAndDangerousPoint >= DANGEROUS_POINT_TRIGGER_DISTANCE_LIMIT){
+                NavigationDangerousInfoItem item = new NavigationDangerousInfoItem(milestoneStepIndex, distanceBetweenStepIndexAndDangerousPoint, voiceMessage);
+                if ((navigationDangerousInfoItemList.size() == 0) || (navigationDangerousInfoItemList != null && item.getStepIndex() != navigationDangerousInfoItemList.get(navigationDangerousInfoItemList.size() - 1).getStepIndex())) {
+                    navigationDangerousInfoItemList.add(item);
+                }
             }
         }
 
 
     }
 
+    /**
+     * Retrieve the step index out of a dangerous point out of a list of step points
+     * @param dangerousPoint
+     * @param stepsPointList
+     * @return
+     */
     private int getStepIndexOfDangerousPoint(Point dangerousPoint, List<Point> stepsPointList) {
         int stepIndex = 0;
         List<LegStep> legSteps = directionsRoute.legs().get(0).steps();
@@ -284,6 +294,13 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         return stepIndex;
     }
 
+    /**
+     * Calculate the distance between a dangerousPoint and a stepPoint.
+     * @param stepIndex
+     * @param dangerousPoint
+     * @param stepsPointList
+     * @return
+     */
     private double getDistanceBetweenDangerousPointAndStepPoint(int stepIndex, Point dangerousPoint, List<Point> stepsPointList) {
         return calculateDistanceBetweenTwoPoint(dangerousPoint, stepsPointList.get(stepIndex));
     }
@@ -306,6 +323,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     }
 
 
+    /**
+     * Add all the milestones in the milestone list.
+     */
     private void addAllMilestone() {
         initAllDangerousInfoItem(safetyLevelsList);
         for (int i = 0; i <= navigationDangerousInfoItemList.size() - 1; i++) {
@@ -313,6 +333,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         }
     }
 
+    /**
+     * Initialize the speech player for voice alert.
+     */
     private void initializeSpeechPlayer() {
         String english = Locale.US.getLanguage();
         Cache cache = new Cache(new File(getApplication().getCacheDir(), COMPONENT_NAVIGATION_INSTRUCTION_CACHE),
@@ -324,6 +347,11 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         speechPlayer = new NavigationSpeechPlayer(speechPlayerProvider);
     }
 
+    /**
+     * Play announcement for a milestone
+     * @param milestone
+     * @param instruction
+     */
     private void playAnnouncement(Milestone milestone, String instruction) {
         if (milestone instanceof StepMilestone) {
             SpeechAnnouncement announcement = SpeechAnnouncement.builder()
@@ -377,6 +405,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
 
     }
 
+
     @Override
     public BannerInstructions willDisplay(BannerInstructions instructions) {
         return instructions;
@@ -386,6 +415,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     public void onInstructionListVisibilityChanged(boolean visible) {
 
     }
+
 
     @Override
     public void onCancelNavigation() {
@@ -413,6 +443,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     }
 
 
+    /**
+     * Play the voice when triggering the custom milestone.
+     * @param routeProgress
+     * @param instruction
+     * @param milestone
+     */
     @Override
     public void onMilestoneEvent(RouteProgress routeProgress, String instruction, Milestone milestone) {
         if (milestone.getIdentifier() >= 100) {

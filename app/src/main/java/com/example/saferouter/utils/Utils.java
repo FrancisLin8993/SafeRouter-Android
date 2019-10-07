@@ -253,6 +253,11 @@ public class Utils {
         return points;
     }
 
+    /**
+     * Retrieve the index of all the dangerous points from the route
+     * @param safetyLevelString
+     * @return
+     */
     public static List<Integer> getDangerousPointIndexFromCurrentRoute(List<String> safetyLevelString) {
         List<Integer> dangerousPointIndexList = new ArrayList<>();
         for (int i = 0; i <= safetyLevelString.size() - 1; i++) {

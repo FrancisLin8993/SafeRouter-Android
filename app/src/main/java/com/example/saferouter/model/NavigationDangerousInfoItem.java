@@ -1,5 +1,8 @@
 package com.example.saferouter.model;
 
+/**
+ * A model class for dangerous information used in navigation view.
+ */
 public class NavigationDangerousInfoItem {
     private int stepIndex;
     private double distanceToStep;

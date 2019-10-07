@@ -11,6 +11,9 @@ import com.example.saferouter.model.RouteInfoItem;
 
 import java.util.List;
 
+/**
+ * An adapter class for route information items
+ */
 public class RouteInfoItemAdapter extends RecyclerView.Adapter<RouteInfoItemAdapter.RouteInfoViewHolder> {
 
     private List<RouteInfoItem> routeInfoItemList;

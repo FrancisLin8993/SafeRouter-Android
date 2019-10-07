@@ -1,5 +1,8 @@
 package com.example.saferouter.model;
 
+/**
+ * A model class for route information item displayed in the list of route options.
+ */
 public class RouteInfoItem {
     private String riskScore, routeNo, duration, distance, recommendation;
 

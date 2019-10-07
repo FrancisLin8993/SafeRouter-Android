@@ -67,9 +67,6 @@ import com.mapbox.mapboxsdk.location.modes.CameraMode;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.plugins.annotation.Symbol;
-import com.mapbox.mapboxsdk.plugins.annotation.SymbolManager;
-import com.mapbox.mapboxsdk.plugins.annotation.SymbolOptions;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.PlaceAutocomplete;
 import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions;
 import com.mapbox.mapboxsdk.style.layers.Layer;
@@ -183,9 +180,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private final String RECOMMENDATION_TAG = "SafeRouter Recommendation";
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
-
-    private SymbolManager symbolManager;
-    private List<Symbol> symbols = new ArrayList<>();
 
     //Select Routes from list
     private DirectionsRoute selectedRoute;
@@ -323,6 +317,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }));
     }
 
+    /**
+     * Show or hide the progress bar
+     * @param show
+     */
     private void showProgress(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         originSearchBar.setEnabled(show ? false : true);
@@ -333,6 +331,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         goToMapButton.setEnabled(show ? false : true);
     }
 
+    /**
+     * Show or hide the list of the route
+     * @param show
+     */
     private void showRouteList(boolean show) {
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -400,6 +402,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
+    /**
+     * Method of selecting an item on the list.
+     * @param selectedRouteNo
+     */
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void onItemSelect(int selectedRouteNo) {
         removeLayersAndResource();
@@ -421,11 +427,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         redirectToSearchScreen();
     }
 
-    /*@OnClick(R.id.button_colour_info)
-    public void colorButtonOnClick() {
-        showColourInfoDialog();
-    }*/
-
     @SuppressLint("MissingPermission")
     @OnClick(R.id.startButton)
     public void startNavigationButtonOnClick() {
@@ -440,9 +441,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
-    /**
-     * Clear all displayed routes and move the camera back to user's location
-     */
+
     /*@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_clear)
     public void clearAllButtonOnClick() {
@@ -701,29 +700,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 iconIgnorePlacement(true)
         );
         loadedMapStyle.addLayer(originSymbolLayer);
-    }
-
-
-    private void addDangerousPointMarker(List<String> safetyLevelList) {
-
-        List<SymbolOptions> options = new ArrayList<>();
-        List<Feature> dangerousFeatureList = new ArrayList<>();
-        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelList);
-
-        for (Integer dangerousIndex : dangerousPointIndexList) {
-            Point dangerousPoint = pointsOfRoute.get(dangerousIndex);
-            dangerousFeatureList.add(Feature.fromGeometry(dangerousPoint));
-        }
-
-        for (Feature feature : dangerousFeatureList) {
-            options.add(new SymbolOptions()
-                    .withGeometry((Point) feature.geometry())
-                    .withIconImage("fire-station-11")
-            );
-
-        }
-
-        symbols = symbolManager.create(options);
     }
 
     @SuppressWarnings({"MissingPermission"})
@@ -1010,33 +986,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         OriginDesPoints.add(destination);
                         String CoordinateStringOfRoutingAlgorithm = Utils.generateCoordinatesJsonStringForRoutingAlgorithm(OriginDesPoints);
                         getRoutingAlgorithm(CoordinateStringOfRoutingAlgorithm, OptimizedRouteCallback);
-
-
-                        /*currentRouteList.add(RoutingAlgorithm);
-
-                        //Collect the coordinates on the route
-                        for (int i = 0; i <= currentRouteList.size() - 1; i++) {
-                            pointsOfRouteList.add(Utils.getPointsOfRoutes(currentRouteList.get(i)));
-                        }
-
-                        pointsOfRoute = Utils.getPointsOfRoutes(currentRouteList.get(0));
-                        String CoordinateStringOfRoutes = Utils.generateJsonStringForMultipleRoutes(pointsOfRouteList);
-
-                        if (currentRouteList.size() >= 2) {
-
-                            unselectedRouteNo1 = 1;
-
-                            if (currentRouteList.size() >= 3) {
-
-                                unselectedRouteNo2 = 2;
-
-                            }
-                        }
-
-
-
-                        //Request for safety levels of different sections of the returned route.
-                        getSafetyLevel(CoordinateStringOfRoutes, safetyLevelCallback);*/
 
                     }
 

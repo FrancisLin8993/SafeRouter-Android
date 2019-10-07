@@ -7,6 +7,9 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
+/**
+ * A touch listener for the route options list
+ */
 public class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {
 
     private ClickListner clickListner;
