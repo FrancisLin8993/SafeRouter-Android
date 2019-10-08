@@ -16,4 +16,7 @@
     <string name="destination_init_holder">Search for destination</string>
     <string name="start_navigation">start navigation</string>
     <string name="go_to_list">View Alternatives</string>
+    <string name="accept_and_close"><![CDATA[Accept & Close]]></string>
+    <string name="disclaimer_content">
+DRIVING CAN BE DANGEROUS.THE INFORMATION PROVIDED BY OUR DIRECTIONS AND OPTIMIZED TRIPS ON SAFEROUTER IS NOT INTENDED TO REPLACE THE INFORMATION PRESENTED ON THE ROAD. IN THE EVENT THAT THE INFORMATION PRESENTED ON THE ROAD (FOR EXAMPLE, BY TRAFFIC LIGHTS, TRAFFIC SIGNS, OR POLICE OFFICERS) DIFFERS FROM INFORMATION PROVIDED BY SAFEROUTER, DO NOT RELY ON THE SAFEROUTER.YOU MUST OBSERVE ALL TRAFFIC LAWS WHILE USING THE SERVICE.</string>
 </resources>

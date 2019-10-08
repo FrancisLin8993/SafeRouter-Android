@@ -10,6 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+        <activity android:name=".AboutPageActivity"></activity>
         <activity android:name=".MapNavigationActivity" />
         <activity
             android:name=".MapActivity"

@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
@@ -138,8 +139,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @BindView(R.id.destination_search_bar)
     MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
-    /*@BindView(R.id.button_colour_info)
-    Button colourInfoButton;*/
     /*@BindView(R.id.button_clear)
     Button clearAllButton;*/
     @BindView(R.id.startButton)
@@ -150,6 +149,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     Button goToMapButton;
     @BindView(R.id.loading_progress)
     View progressBar;
+    @BindView(R.id.about_page_fab)
+    FloatingActionButton aboutPageButton;
     private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
@@ -439,6 +440,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         intent.putExtra("voiceMessages", (Serializable) voiceMessagesListOfRoutes.get(selectedRouteNo));
         startActivity(intent);
 
+    }
+
+    @OnClick(R.id.about_page_fab)
+    public void aboutPageButtonOnClick(){
+        Intent intent = new Intent(this, AboutPageActivity.class);
+        startActivity(intent);
     }
 
 
@@ -1152,7 +1159,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     /**
      * Display the dialog of colour information.
      */
-    private void showColourInfoDialog() {
+    private void showDisclaimerDialog() {
         Dialog dialog = new Dialog(MapActivity.this);
         dialog.setContentView(R.layout.dialog_view);
         Button dialogButton = dialog.findViewById(R.id.buttonOk);

@@ -12,7 +12,7 @@
             android:id="@+id/color_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/route_colour_information"
+            android:text="Disclaimer:"
             android:textAlignment="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
         <TextView
@@ -20,27 +20,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="@string/safe_level"
+            android:text="@string/disclaimer_content"
             android:textAlignment="center"
-            android:textColor="@color/routeGreen"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-        <TextView
-            android:id="@+id/color_yellow_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/medium_level"
-            android:textAlignment="center"
-            android:textColor="@color/routeYellow"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-        <TextView
-            android:id="@+id/color_red_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/dangerous"
-            android:textAlignment="center"
-            android:textColor="@color/routeRed"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
         <Button
             android:id="@+id/buttonOk"
@@ -49,7 +30,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="15dp"
             android:background="@color/colorPrimary"
-            android:text="Ok"
+            android:text="@string/accept_and_close"
             android:textColor="#FFF" />
     </LinearLayout>
 </LinearLayout>
