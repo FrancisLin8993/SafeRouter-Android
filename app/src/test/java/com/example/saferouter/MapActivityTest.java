@@ -61,14 +61,4 @@ public class MapActivityTest {
         assertEquals("{\"data\":\"[[(144.966597416688,-37.741313666549),(144.934456,-37.751234)],[(144.966597416688,-37.741313666549),(144.934456,-37.751234)]]\"}", jsonString);
 
     }
-
-    @Test
-    public void getCorrectSafetyLevelsForMultipleRoutes(){
-        String safetyLevelResponse = "{\"ratings\":[[3.0,1.0],[3.0,1.0]]";
-        List<List<String>> safetyLevelListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponse);
-        assertEquals("3.0", safetyLevelListOfRoutes.get(0).get(0));
-        assertEquals("1.0", safetyLevelListOfRoutes.get(0).get(1));
-        assertEquals("3.0", safetyLevelListOfRoutes.get(1).get(0));
-        assertEquals("1.0", safetyLevelListOfRoutes.get(1).get(1));
-    }
 }
