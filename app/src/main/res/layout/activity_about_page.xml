@@ -6,38 +6,37 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/aboutPage"
+    android:fillViewport="true"
     tools:context=".AboutPageActivity">
 
-    <ScrollView
+
+    <Button
+        android:id="@+id/about_close_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        mapbox:layout_constraintBottom_toBottomOf="parent"
-        mapbox:layout_constraintEnd_toEndOf="parent">
+        android:layout_below="@id/about_background"
+        android:backgroundTint="@color/colorPrimary"
+        android:enabled="true"
+        android:text="@string/accept_and_close"
+        android:textColor="@color/mapboxWhite"
+        app:layout_constraintBottom_toBottomOf="@id/about_background"
+        app:layout_constraintEnd_toEndOf="@id/about_background">
 
+    </Button>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/about_page">
+    <ImageView
+        android:id="@+id/about_background"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:scaleType="fitCenter"
+        android:src="@drawable/about_page"
+        android:background="@drawable/border_image"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-            <Button
-                android:id="@+id/about_close_button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:backgroundTint="@color/colorPrimary"
-                android:orientation="horizontal"
-                android:text="@string/accept_and_close"
-                android:textColor="@color/mapboxWhite"
-                android:enabled="true">
-
-            </Button>
-
-        </LinearLayout>
-
-
-    </ScrollView>
+    </ImageView>
 
 
 </android.support.constraint.ConstraintLayout>
