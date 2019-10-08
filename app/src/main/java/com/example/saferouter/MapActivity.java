@@ -726,6 +726,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
             if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
                 String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
+                message = StringUtils.substringBefore(message, " AT");
                 Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
             }
 
