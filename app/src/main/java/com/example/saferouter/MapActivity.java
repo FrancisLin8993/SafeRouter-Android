@@ -718,21 +718,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
         Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
-        for (int i = 0; i <= dangerousPointIndexList.size() - 2; i++) {
+        for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
             int dangerousPointIndex = dangerousPointIndexList.get(i);
             Point dangerousPoint = pointsOfRoute.get(dangerousPointIndex);
 
             double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
 
-            Point nextPoint = pointsOfRoute.get(dangerousPointIndex + 1);
-            double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
-            double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
-            if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
-                String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
-                message = StringUtils.substringBefore(message, " AT");
-                Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+            if (dangerousPointIndex != pointsOfRoute.size() - 1){
+                Point nextPoint = pointsOfRoute.get(dangerousPointIndex + 1);
+                double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
+                double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
+                if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
+                    String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
+                    message = StringUtils.substringBefore(message, " AT");
+                    Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+                }
             }
-
         }
 
         return true;
