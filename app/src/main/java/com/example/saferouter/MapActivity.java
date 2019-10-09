@@ -132,7 +132,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private List<List<String>> navigationRatingsListOfRoutes;
     private List<List<String>> voiceMessagesListOfRoutes;
     private static final String TAG = "MapActivity";
-    private List<Point> pointsOfRoute;
+    private List<Point> pointsOfCurrentRoute;
     private List<List<Point>> pointsOfRouteList = new ArrayList<>();
     @BindView(R.id.origin_search_bar)
     MaterialSearchBar originSearchBar;
@@ -259,7 +259,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 int routeNumber = Integer.parseInt(StringUtils.right(item.getRouteNo(), 1));
                 selectedRouteNo = routeNumber - 1;
                 selectedRoute = currentRouteList.get(selectedRouteNo);
-                pointsOfRoute = Utils.getPointsOfRoutes(selectedRoute);
+                pointsOfCurrentRoute = Utils.getPointsOfRoutes(selectedRoute);
 
                 if (currentRouteList.size() >= 2) {
 
@@ -720,12 +720,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
         for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
             int dangerousPointIndex = dangerousPointIndexList.get(i);
-            Point dangerousPoint = pointsOfRoute.get(dangerousPointIndex);
+            Point dangerousPoint = pointsOfCurrentRoute.get(dangerousPointIndex);
 
             double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
 
-            if (dangerousPointIndex != pointsOfRoute.size() - 1){
-                Point nextPoint = pointsOfRoute.get(dangerousPointIndex + 1);
+            if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1){
+                Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
                 double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
                 double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
                 if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
@@ -838,7 +838,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     pointsOfRouteList.add(Utils.getPointsOfRoutes(currentRouteList.get(i)));
                 }
 
-                pointsOfRoute = Utils.getPointsOfRoutes(currentRouteList.get(0));
+                pointsOfCurrentRoute = Utils.getPointsOfRoutes(currentRouteList.get(0));
                 String CoordinateStringOfRoutes = Utils.generateJsonStringForMultipleRoutes(pointsOfRouteList);
 
                 if (currentRouteList.size() >= 2) {
@@ -1017,9 +1017,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void drawRoutePolyLine(List<String> safetyLevelList) {
         Map safetyLevelMap = SAFETY_LEVEL_COLOUR_MAP;
-        for (int i = 0; i <= pointsOfRoute.size() - 2; i++) {
+        for (int i = 0; i <= pointsOfCurrentRoute.size() - 2; i++) {
             int colourOfSection = (int) safetyLevelMap.get(safetyLevelList.get(i));
-            addLegSourceOfRoute(pointsOfRoute.get(i), pointsOfRoute.get(i + 1), colourOfSection);
+            addLegSourceOfRoute(pointsOfCurrentRoute.get(i), pointsOfCurrentRoute.get(i + 1), colourOfSection);
         }
         for (int i = 0; i <= SAFETY_LEVEL_COLOURS.length - 1; i++) {
             addRouteLayer(SAFETY_LEVEL_COLOURS[i]);
