@@ -320,6 +320,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Show or hide the progress bar
+     *
      * @param show
      */
     private void showProgress(boolean show) {
@@ -334,6 +335,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Show or hide the list of the route
+     *
      * @param show
      */
     private void showRouteList(boolean show) {
@@ -405,6 +407,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     /**
      * Method of selecting an item on the list.
+     *
      * @param selectedRouteNo
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -443,7 +446,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
     @OnClick(R.id.about_page_fab)
-    public void aboutPageButtonOnClick(){
+    public void aboutPageButtonOnClick() {
         Intent intent = new Intent(this, AboutPageActivity.class);
         startActivity(intent);
     }
@@ -1274,6 +1277,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         } else {
             Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show();
             finish();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mapView.getVisibility() == View.VISIBLE) {
+            finishAffinity();
+        } else {
+            showRouteList(false);
         }
     }
 
