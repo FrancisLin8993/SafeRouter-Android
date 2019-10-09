@@ -11,5 +11,5 @@ public interface RoutingAlgorithmApiInterface {
     String RoutingAlgorithm_URL = "http://Saferouter-env.7p2ipt5mmc.us-east-2.elasticbeanstalk.com/";
     @Headers("Content-Type: application/json")
     @POST("api")
-    Call<ResponseBody> getRoutingAlgorithm(@Body RequestBody params);
+    Call<ResponseBody> getOptimizedRoute(@Body RequestBody params);
 }

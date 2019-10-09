@@ -12,6 +12,7 @@ import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
@@ -192,15 +193,10 @@ public class Utils {
      */
     public static List<String> parseSafetyScoreOfRoutesFromResponse(String jsonResponse) {
         List<String> safetyScoreOfRoutes = new ArrayList<>();
-        /*jsonResponse = StringUtils.removeStart(jsonResponse, "{\"navigation_ratings\":[[");
-        String[] ratingsAndScores = jsonResponse.split(",\"scores\":\\[");
-        String[] safetyscores = ratingsAndScores[1].split("]");*/
         jsonResponse = StringUtils.substringBetween(jsonResponse, ",\"scores\":[", "],\"voice_alerts\"");
         if (jsonResponse.contains(",")){
             String[] safetyScoreString = jsonResponse.split(",");
-            for (int i = 0; i <= safetyScoreString.length - 1; i++){
-                safetyScoreOfRoutes.add(safetyScoreString[i]);
-            }
+            safetyScoreOfRoutes.addAll(Arrays.asList(safetyScoreString));
         } else {
             safetyScoreOfRoutes.add(jsonResponse);
         }

@@ -28,12 +28,9 @@ import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.maps.MapboxMap;
-import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.services.android.navigation.ui.v5.NavigationView;
 import com.mapbox.services.android.navigation.ui.v5.NavigationViewOptions;
 import com.mapbox.services.android.navigation.ui.v5.OnNavigationReadyCallback;
-import com.mapbox.services.android.navigation.ui.v5.SoundButton;
 import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener;
 import com.mapbox.services.android.navigation.ui.v5.listeners.InstructionListListener;
 import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener;
@@ -51,14 +48,13 @@ import com.mapbox.services.android.navigation.v5.milestone.Trigger;
 import com.mapbox.services.android.navigation.v5.milestone.TriggerProperty;
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener;
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress;
-import com.mapbox.turf.TurfConstants;
-import com.mapbox.turf.TurfMeasurement;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 import butterknife.BindView;
@@ -66,7 +62,6 @@ import butterknife.ButterKnife;
 import okhttp3.Cache;
 
 import static com.example.saferouter.utils.CommonConstants.COMPONENT_NAVIGATION_INSTRUCTION_CACHE;
-import static com.example.saferouter.utils.CommonConstants.DANGEROUS_LEVEL;
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_INTERVAL_IN_MILLISECONDS;
 import static com.example.saferouter.utils.CommonConstants.DEFAULT_MAX_WAIT_TIME;
 import static com.example.saferouter.utils.CommonConstants.TEN_MEGABYTE_CACHE_SIZE;
@@ -105,7 +100,6 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         Mapbox.getInstance(this, getString(R.string.access_token));
         setContentView(R.layout.activity_map_navigation);
         ButterKnife.bind(this);
-        //navigationView = findViewById(R.id.navigationView);
         originPoint = (Point) getIntent().getExtras().get("originPoint");
         destination = (Point) getIntent().getExtras().get("destination");
         directionsRoute = (DirectionsRoute) getIntent().getExtras().get("navigationRoute");
@@ -113,7 +107,9 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         pointsOfRoute = Utils.getPointsOfRoutes(directionsRoute);
         safetyLevelsList = (ArrayList<String>) getIntent().getExtras().get("safetyLevels");
         navigationRatingsList = (ArrayList<String>) getIntent().getExtras().get("navigationRatings");
-        navigationRatingsList.remove(0);
+        if (navigationRatingsList != null) {
+            navigationRatingsList.remove(0);
+        }
         voiceMessagesList = (ArrayList<String>) getIntent().getExtras().get("voiceMessages");
         modifyRouteCongestionInfo();
         addAllMilestone();
@@ -135,9 +131,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
      * So we change the congestion information to actually reflect the safety levels.
      */
     private void modifyRouteCongestionInfo() {
-        RouteLeg routeLeg = directionsRoute.legs().get(0);
+        RouteLeg routeLeg = Objects.requireNonNull(directionsRoute.legs()).get(0);
         LegAnnotation legAnnotation = routeLeg.annotation();
-        LegAnnotation newLegAnnotation = legAnnotation.toBuilder().congestion(navigationRatingsList).build();
+        LegAnnotation newLegAnnotation = null;
+        if (legAnnotation != null) {
+            newLegAnnotation = legAnnotation.toBuilder().congestion(navigationRatingsList).build();
+        }
         RouteLeg newRouteLeg = routeLeg.toBuilder().annotation(newLegAnnotation).build();
         List<RouteLeg> newLegs = new ArrayList<>();
         newLegs.add(newRouteLeg);
@@ -230,7 +229,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
             }
         }
         return new StepMilestone.Builder()
-                //in order to avoid repetitive ids for default milestones, set step mileston id to a large number
+                //in order to avoid repetitive ids for default milestones, set step milestone id to a large number
                 .setIdentifier(dangerousInfoItemListIndex + STEP_MILESTONE_ID_OFFSET)
                 .setInstruction(new dangerousInfoInstruction())
                 .setTrigger(
@@ -281,7 +280,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
      */
     private int getStepIndexOfDangerousPoint(Point dangerousPoint, List<Point> stepsPointList) {
         int stepIndex = 0;
-        List<LegStep> legSteps = directionsRoute.legs().get(0).steps();
+        List<LegStep> legSteps = Objects.requireNonNull(directionsRoute.legs()).get(0).steps();
 
         for (int i = 0; i <= stepsPointList.size() - 2; i++) {
             double distanceToCurrentStepIndex = calculateDistanceBetweenTwoPoint(dangerousPoint, stepsPointList.get(i));
@@ -313,10 +312,12 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
     private List<Point> getTheStepPointsFromCurrentRoute() {
         List<Point> stepPoints = new ArrayList<>();
 
-        List<LegStep> legSteps = directionsRoute.legs().get(0).steps();
+        List<LegStep> legSteps = Objects.requireNonNull(directionsRoute.legs()).get(0).steps();
 
-        for (LegStep step : legSteps) {
-            stepPoints.add(step.maneuver().location());
+        if (legSteps != null) {
+            for (LegStep step : legSteps) {
+                stepPoints.add(step.maneuver().location());
+            }
         }
 
         return stepPoints;

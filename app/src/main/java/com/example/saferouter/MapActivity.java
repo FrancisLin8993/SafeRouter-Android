@@ -19,7 +19,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import android.support.annotation.NonNull;
@@ -127,7 +127,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private LocationComponent locationComponent;
     // variables for calculating and drawing a route
     private List<DirectionsRoute> currentRouteList;
-    private String safetyLevelResponseString;
     private List<List<String>> safetyLevelsListOfRoutes;
     private List<List<String>> navigationRatingsListOfRoutes;
     private List<List<String>> voiceMessagesListOfRoutes;
@@ -151,7 +150,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     View progressBar;
     @BindView(R.id.about_page_fab)
     FloatingActionButton aboutPageButton;
-    private CameraPosition currentCameraPosition;
     private Point originPoint;
     private Point destinationPoint;
     //private LatLngBounds latLngBoundsMelbourne;
@@ -163,22 +161,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private List<Feature> redFeatureList = new ArrayList<>();
     //Constants
     private static final int REQUEST_CODE_AUTOCOMPLETE = 1;
-    /*private final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
-    private final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;*/
 
     private final LatLngBounds BBOX_MELBOURNE = new LatLngBounds.Builder()
             .include(new LatLng(-38.2250, 145.5498))
             .include(new LatLng(-37.5401, 144.5532))
             .build();
     private final Point MELBOURNE = Point.fromLngLat(144.9631, 37.8136);
-    private final int AUTO_COMPLETE_LIST_LIMIT = 5;
-    private final String PLACE_SEARCH_COUNTRY = "AU";
+    private static final int AUTO_COMPLETE_LIST_LIMIT = 5;
+    private static final String PLACE_SEARCH_COUNTRY = "AU";
     private final String NO_ROUTES_ERROR_MESSAGE = "No routes found";
     private final String NO_SAFETY_LEVEL_ERROR_MESSAGE = "No safety level found";
     private static final String ROUTE_LAYER_ID = "route-layer-id";
     private static final String ROUTE_SOURCE_ID = "route-source-id";
     private static final int NO_ROUTE_SELECTED = -1;
-    private final String RECOMMENDATION_TAG = "SafeRouter Recommendation";
+    private static final String RECOMMENDATION_TAG = "SafeRouter Recommendation";
 
     private List<String> routeSafetyScoreStringList = new ArrayList<>();
 
@@ -195,9 +191,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     RecyclerView routeInfoRecyclerView;
     private RouteInfoItemAdapter routeInfoItemAdapter;
 
-    //Routing Algorithm
-    private DirectionsRoute RoutingAlgorithm;
-    //private List<Point> OriginDesPoints;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -229,9 +222,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.addOnMapClickListener(MapActivity.this);
                 //Limit the camera inside the latitude and longitude bounds of Greater Melbourne.
                 mapboxMap.setLatLngBoundsForCameraTarget(BBOX_MELBOURNE);
-
-                currentCameraPosition = mapboxMap.getCameraPosition();
-
 
                 initRecyclerView();
                 initSource(style);
@@ -325,12 +315,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      */
     private void showProgress(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
-        originSearchBar.setEnabled(show ? false : true);
-        destinationSearchBar.setEnabled(show ? false : true);
-        viewAlternativesButton.setEnabled(show ? false : true);
-        routeInfoRecyclerView.setClickable(show ? false : true);
-        startNavigationButton.setEnabled(show ? false : true);
-        goToMapButton.setEnabled(show ? false : true);
+        originSearchBar.setEnabled(!show);
+        destinationSearchBar.setEnabled(!show);
+        viewAlternativesButton.setEnabled(!show);
+        routeInfoRecyclerView.setClickable(!show);
+        startNavigationButton.setEnabled(!show);
+        goToMapButton.setEnabled(!show);
     }
 
     /**
@@ -370,7 +360,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             double distance = currentRouteList.get(i).distance();
             BigDecimal distanceInBigDecimal = new BigDecimal(distance);
             distanceInBigDecimal = distanceInBigDecimal.divide(new BigDecimal("1000"), 1, RoundingMode.HALF_UP);
-            String distanceInString = String.valueOf(distanceInBigDecimal) + " km";
+            String distanceInString = distanceInBigDecimal + " km";
             item.setDistance(distanceInString);
 
             String safetyScoreString = "Route Risk Score: " + routeSafetyScoreStringList.get(i);
@@ -379,7 +369,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             routeInfoItemList.add(item);
         }
 
-        routeInfoItemList.sort(Comparator.comparing(item -> item.getRiskScore()));
+        routeInfoItemList.sort(Comparator.comparing(RouteInfoItem::getRiskScore));
 
         routeInfoItemList.get(0).setRecommendation(RECOMMENDATION_TAG);
 
@@ -571,7 +561,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             if (clickedSearchBarId == R.id.destination_search_bar) {
                 destinationSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
 
-                destinationPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
+                destinationPoint = Point.fromLngLat(((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).longitude(), ((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).latitude());
 
                 if (originPoint == null)
                     originPoint = getCurrentLocation();
@@ -587,7 +577,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
                 originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
-                originPoint = Point.fromLngLat(((Point) selectedLocationCarmenFeature.geometry()).longitude(), ((Point) selectedLocationCarmenFeature.geometry()).latitude());
+                originPoint = Point.fromLngLat(((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).longitude(), ((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).latitude());
                 LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
@@ -615,7 +605,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param destination
      */
     private void setDestinationMarkerSource(Point destination) {
-        GeoJsonSource destinationSource = mapboxMap.getStyle().getSourceAs("destination-source-id");
+        GeoJsonSource destinationSource = Objects.requireNonNull(mapboxMap.getStyle()).getSourceAs("destination-source-id");
         if (destinationSource != null) {
             destinationSource.setGeoJson(Feature.fromGeometry(destination));
         }
@@ -627,7 +617,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param originPoint
      */
     private void setOriginPointMarkerSsource(Point originPoint) {
-        GeoJsonSource originSource = mapboxMap.getStyle().getSourceAs("origin-source-id");
+        GeoJsonSource originSource = Objects.requireNonNull(mapboxMap.getStyle()).getSourceAs("origin-source-id");
         if (originSource != null && !originPoint.equals(getCurrentLocation())) {
             originSource.setGeoJson(Feature.fromGeometry(originPoint));
         }
@@ -640,7 +630,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param layerId
      */
     private void hideMarker(String layerId) {
-        Layer layer = mapboxMap.getStyle().getLayer(layerId);
+        Layer layer = Objects.requireNonNull(mapboxMap.getStyle()).getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.NONE));
     }
@@ -651,7 +641,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @param layerId
      */
     private void showMarker(String layerId) {
-        Layer layer = mapboxMap.getStyle().getLayer(layerId);
+        Layer layer = Objects.requireNonNull(mapboxMap.getStyle()).getLayer(layerId);
         if (layer != null)
             layer.setProperties(visibility(Property.VISIBLE));
     }
@@ -773,7 +763,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             try {
 
-                safetyLevelResponseString = response.body().string();
+                String safetyLevelResponseString = response.body().string();
                 safetyLevelsListOfRoutes = Utils.parseSafetyLevelFromResponse(safetyLevelResponseString);
                 navigationRatingsListOfRoutes = Utils.parseNavigationRatingsFromResponse(safetyLevelResponseString);
                 routeSafetyScoreStringList = Utils.parseSafetyScoreOfRoutesFromResponse(safetyLevelResponseString);
@@ -809,10 +799,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 .baseUrl(RoutingAlgorithmApiInterface.RoutingAlgorithm_URL)
                 .build();
 
-        RoutingAlgorithmApiInterface OptimizedRoute = retrofit.create(RoutingAlgorithmApiInterface.class);
+        RoutingAlgorithmApiInterface routingAlgorithmApiInterface = retrofit.create(RoutingAlgorithmApiInterface.class);
 
         RequestBody body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonString);
-        Call<ResponseBody> responseBodyCall = OptimizedRoute.getRoutingAlgorithm(body);
+        Call<ResponseBody> responseBodyCall = routingAlgorithmApiInterface.getOptimizedRoute(body);
 
         responseBodyCall.enqueue(callback);
     }
@@ -830,8 +820,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             try {
                 MapMatchingResponse matchingResponse = MapMatchingResponse.fromJson(response.body().string());
-                RoutingAlgorithm = matchingResponse.matchings().get(0).toDirectionRoute();
-                currentRouteList.add(RoutingAlgorithm);
+                DirectionsRoute optimizedRoute = matchingResponse.matchings().get(0).toDirectionRoute();
+                currentRouteList.add(optimizedRoute);
 
                 //Collect the coordinates on the route
                 for (int i = 0; i <= currentRouteList.size() - 1; i++) {
@@ -893,7 +883,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.getStyle(style -> {
 
 
-                    FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(currentRouteList.get(unselectedRouteNo1).geometry(), PRECISION_6))});
+                    FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(Objects.requireNonNull(currentRouteList.get(unselectedRouteNo1).geometry()), PRECISION_6))});
                     String lineSourceID = "add-line-source-" + currentRouteList.toString() + UUID.randomUUID().toString();
                     GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
 
@@ -915,7 +905,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     mapboxMap.getStyle(style -> {
 
 
-                        FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(currentRouteList.get(unselectedRouteNo2).geometry(), PRECISION_6))});
+                        FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(Objects.requireNonNull(currentRouteList.get(unselectedRouteNo2).geometry()), PRECISION_6))});
                         String lineSourceID = "add-line-source-" + currentRouteList.toString() + UUID.randomUUID().toString();
                         GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
 
@@ -937,7 +927,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         mapboxMap.getStyle(style -> {
 
 
-                            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(currentRouteList.get(unselectedRouteNo3).geometry(), PRECISION_6))});
+                            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(LineString.fromPolyline(Objects.requireNonNull(currentRouteList.get(unselectedRouteNo3).geometry()), PRECISION_6))});
                             String lineSourceID = "add-line-source-" + currentRouteList.toString() + UUID.randomUUID().toString();
                             GeoJsonSource geoJsonSource = new GeoJsonSource(lineSourceID, featureCollection);
 
@@ -1016,9 +1006,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void drawRoutePolyLine(List<String> safetyLevelList) {
-        Map safetyLevelMap = SAFETY_LEVEL_COLOUR_MAP;
         for (int i = 0; i <= pointsOfCurrentRoute.size() - 2; i++) {
-            int colourOfSection = (int) safetyLevelMap.get(safetyLevelList.get(i));
+            int colourOfSection = SAFETY_LEVEL_COLOUR_MAP.get(safetyLevelList.get(i));
             addLegSourceOfRoute(pointsOfCurrentRoute.get(i), pointsOfCurrentRoute.get(i + 1), colourOfSection);
         }
         for (int i = 0; i <= SAFETY_LEVEL_COLOURS.length - 1; i++) {
@@ -1158,7 +1147,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * @return
      */
     private boolean isLineSourceExist(String lineSourceID) {
-        return mapboxMap.getStyle().getSource(lineSourceID) != null;
+        return Objects.requireNonNull(mapboxMap.getStyle()).getSource(lineSourceID) != null;
     }
 
     /**
@@ -1181,10 +1170,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private void enableLocationComponent(@NonNull Style loadedMapStyle) {
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-            // Activate the MapboxMap LocationComponent to show user location
-            // Adding in LocationComponentOptions is also an optional parameter
-            //locationComponent = mapboxMap.getLocationComponent();
-            //locationComponent.activateLocationComponent(this, loadedMapStyle);
+
             //Create and customize the LocationComponent's options
             LocationComponentOptions customLocationComponentOptions = LocationComponentOptions.builder(this)
                     .build();
