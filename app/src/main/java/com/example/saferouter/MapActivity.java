@@ -138,8 +138,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @BindView(R.id.destination_search_bar)
     MaterialSearchBar destinationSearchBar;
     private int clickedSearchBarId;
-    /*@BindView(R.id.button_clear)
-    Button clearAllButton;*/
     @BindView(R.id.startButton)
     Button startNavigationButton;
     @BindView(R.id.button_view_alternatives)
@@ -706,25 +704,26 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
 
-        List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
-        Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
-        for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
-            int dangerousPointIndex = dangerousPointIndexList.get(i);
-            Point dangerousPoint = pointsOfCurrentRoute.get(dangerousPointIndex);
+        if (safetyLevelsListOfRoutes != null){
+            List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
+            Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
+            for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
+                int dangerousPointIndex = dangerousPointIndexList.get(i);
+                Point dangerousPoint = pointsOfCurrentRoute.get(dangerousPointIndex);
 
-            double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
+                double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
 
-            if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1){
-                Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
-                double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
-                double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
-                if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
-                    String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
-                    Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+                if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1){
+                    Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
+                    double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
+                    double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
+                    if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
+                        String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
+                        Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+                    }
                 }
             }
         }
-
         return true;
     }
 
