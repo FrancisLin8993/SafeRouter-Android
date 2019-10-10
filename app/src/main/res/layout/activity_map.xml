@@ -83,6 +83,22 @@
     </LinearLayout>
 
     <android.support.design.widget.FloatingActionButton
+        android:id="@+id/recenter_location_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="180dp"
+        android:src="@android:drawable/ic_menu_mylocation"
+        mapbox:backgroundTint="@color/colorPrimary"
+        mapbox:elevation="8dp"
+        mapbox:fabSize="mini"
+        mapbox:layout_constraintBottom_toBottomOf="parent"
+
+        mapbox:layout_constraintEnd_toEndOf="parent"
+        mapbox:maxImageSize="24dp" />
+
+    <android.support.design.widget.FloatingActionButton
         android:id="@+id/about_page_fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

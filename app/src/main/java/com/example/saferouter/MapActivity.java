@@ -148,6 +148,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     View progressBar;
     @BindView(R.id.about_page_fab)
     FloatingActionButton aboutPageButton;
+    @BindView(R.id.recenter_location_fab)
+    FloatingActionButton recenterLocationButton;
     private Point originPoint;
     private Point destinationPoint;
     //private LatLngBounds latLngBoundsMelbourne;
@@ -336,6 +338,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             goToMapButton.setVisibility(show ? View.GONE : View.VISIBLE);
         }
         startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
+        if (show){
+            findViewById(R.id.about_page_fab).setVisibility(View.GONE);
+            findViewById(R.id.recenter_location_fab).setVisibility(View.GONE);
+        } else {
+            findViewById(R.id.about_page_fab).setVisibility(View.VISIBLE);
+            findViewById(R.id.recenter_location_fab).setVisibility(View.VISIBLE);
+        }
+
     }
 
     /**
@@ -437,6 +447,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void aboutPageButtonOnClick() {
         Intent intent = new Intent(this, AboutPageActivity.class);
         startActivity(intent);
+    }
+
+    @OnClick(R.id.recenter_location_fab)
+    public void recenterLocationButtonOnClick(){
+        originPoint = getCurrentLocation();
+        LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
+        CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).zoom(14).build();
+        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
     }
 
 
