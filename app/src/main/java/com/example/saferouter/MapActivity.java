@@ -1358,7 +1358,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             enableLocationComponent(mapboxMap.getStyle());
         } else {
             Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show();
-            finish();
+            finishAffinity();
         }
     }
 
