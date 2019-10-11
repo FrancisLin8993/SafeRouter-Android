@@ -330,7 +330,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      *
      * @param show
      */
-    private void showRouteList(boolean show) {
+    /*private void showRouteList(boolean show) {
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
@@ -350,7 +350,31 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             findViewById(R.id.recenter_location_fab).setVisibility(View.VISIBLE);
         }
 
+    }*/
+
+    //If no simulation of navigation, use this version
+    private void showRouteList(boolean show) {
+        mapView.setVisibility(show ? View.GONE : View.VISIBLE);
+        routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
+        viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
+        // If user does not select a route
+        if (selectedRouteNo == NO_ROUTE_SELECTED || !originSearchBar.getPlaceHolderText().equals(getString(R.string.origin_init_holder))) {
+            goToMapButton.setVisibility(View.GONE);
+            startNavigationButton.setVisibility(View.GONE);
+        } else {
+            goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+            startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
+        if (show) {
+            findViewById(R.id.about_page_fab).setVisibility(View.GONE);
+            findViewById(R.id.recenter_location_fab).setVisibility(View.GONE);
+        } else {
+            findViewById(R.id.about_page_fab).setVisibility(View.VISIBLE);
+            findViewById(R.id.recenter_location_fab).setVisibility(View.VISIBLE);
+        }
+
     }
+
 
     /**
      * Initialize data in each item in the recycler view.
@@ -638,7 +662,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
                 setOriginPointMarkerSource(originPoint);
 
-                if (selectedLocationCarmenFeature.text().equals("Your Current Location")) {
+                if (selectedLocationCarmenFeature.text().equals(getString(R.string.origin_init_holder))) {
                     originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.text());
                     hideMarker("origin-symbol-layer-id");
                 } else {
@@ -663,7 +687,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
 
     private void addUserCurrentLocationInSearchList() {
-        currentLocationCarmenFeature = CarmenFeature.builder().text("Your Current Location")
+        currentLocationCarmenFeature = CarmenFeature.builder().text(getString(R.string.origin_init_holder))
                 .geometry(getCurrentLocation())
                 .id(getCurrentLocation().toString())
                 .properties(new JsonObject())
