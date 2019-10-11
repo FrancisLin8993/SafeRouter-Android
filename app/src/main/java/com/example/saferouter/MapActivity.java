@@ -224,7 +224,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 initRecyclerView();
                 initSource(style);
 
-                addUserCurrentLocationInSearchList();
+
             }
         });
 
@@ -550,6 +550,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      */
     private void redirectToSearchScreen() {
         Intent intent;
+        addUserCurrentLocationInSearchList();
         // Only show the "Your current location" entry in the search list
         // when user clicking the origin search bar
         if (clickedSearchBarId == R.id.destination_search_bar) {
@@ -558,7 +559,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     .placeOptions(PlaceOptions.builder()
                             .backgroundColor(Color.WHITE)
                             .limit(AUTO_COMPLETE_LIST_LIMIT)
-                            .historyCount(HISTORY_SEARCH_PLACE_COUNT)
                             .hint("Search for destination")
                             .country(PLACE_SEARCH_COUNTRY)
                             .bbox(144.5532, -38.2250, 145.5498, -37.5401)
@@ -571,7 +571,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     .placeOptions(PlaceOptions.builder()
                             .backgroundColor(Color.WHITE)
                             .limit(AUTO_COMPLETE_LIST_LIMIT)
-                            .historyCount(HISTORY_SEARCH_PLACE_COUNT)
                             .hint("Search for starting point")
                             .country(PLACE_SEARCH_COUNTRY)
                             .bbox(144.5532, -38.2250, 145.5498, -37.5401)
