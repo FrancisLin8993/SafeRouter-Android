@@ -339,7 +339,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
             startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
         }
-        if (show){
+        if (show) {
             findViewById(R.id.about_page_fab).setVisibility(View.GONE);
             findViewById(R.id.recenter_location_fab).setVisibility(View.GONE);
         } else {
@@ -451,7 +451,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
     @OnClick(R.id.recenter_location_fab)
-    public void recenterLocationButtonOnClick(){
+    public void recenterLocationButtonOnClick() {
         originPoint = getCurrentLocation();
         LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
         CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).zoom(14).build();
@@ -533,17 +533,33 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      * Redirect to search location screen
      */
     private void redirectToSearchScreen() {
-        Intent intent = new PlaceAutocomplete.IntentBuilder()
-                .accessToken(Mapbox.getAccessToken())
-                .placeOptions(PlaceOptions.builder()
-                        .backgroundColor(Color.WHITE)
-                        .limit(AUTO_COMPLETE_LIST_LIMIT)
-                        .country(PLACE_SEARCH_COUNTRY)
-                        .bbox(144.5532, -38.2250, 145.5498, -37.5401)
-                        //.addInjectedFeature(currentLocationCarmenFeature)
-                        .build(PlaceOptions.MODE_CARDS))
-                .build(MapActivity.this);
-        startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
+        Intent intent;
+        if (clickedSearchBarId == R.id.destination_search_bar) {
+            intent = new PlaceAutocomplete.IntentBuilder()
+                    .accessToken(Mapbox.getAccessToken())
+                    .placeOptions(PlaceOptions.builder()
+                            .backgroundColor(Color.WHITE)
+                            .limit(AUTO_COMPLETE_LIST_LIMIT)
+                            .country(PLACE_SEARCH_COUNTRY)
+                            .bbox(144.5532, -38.2250, 145.5498, -37.5401)
+                            .build(PlaceOptions.MODE_CARDS))
+                    .build(MapActivity.this);
+            startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
+        } else if (clickedSearchBarId == R.id.origin_search_bar) {
+            intent = new PlaceAutocomplete.IntentBuilder()
+                    .accessToken(Mapbox.getAccessToken())
+                    .placeOptions(PlaceOptions.builder()
+                            .backgroundColor(Color.WHITE)
+                            .limit(AUTO_COMPLETE_LIST_LIMIT)
+                            .country(PLACE_SEARCH_COUNTRY)
+                            .bbox(144.5532, -38.2250, 145.5498, -37.5401)
+                            .addInjectedFeature(currentLocationCarmenFeature)
+                            .build(PlaceOptions.MODE_CARDS))
+                    .build(MapActivity.this);
+            startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
+        }
+
+
     }
 
     /**
@@ -594,12 +610,19 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
 
             } else if (clickedSearchBarId == R.id.origin_search_bar) {
-                originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
+
                 originPoint = Point.fromLngLat(((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).longitude(), ((Point) Objects.requireNonNull(selectedLocationCarmenFeature.geometry())).latitude());
                 LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
                 CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
-                setOriginPointMarkerSsource(originPoint);
+                setOriginPointMarkerSource(originPoint);
+
+                if (selectedLocationCarmenFeature.text().equals("Your Current Location")) {
+                    originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.text());
+                    hideMarker("origin-symbol-layer-id");
+                } else {
+                    originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
+                }
 
                 if (destinationPoint != null && destinationPoint.equals(originPoint))
                     Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
@@ -618,7 +641,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-    private void addUserCurrentLocationInSearchList(){
+    private void addUserCurrentLocationInSearchList() {
         currentLocationCarmenFeature = CarmenFeature.builder().text("Your Current Location")
                 .geometry(getCurrentLocation())
                 .id(getCurrentLocation().toString())
@@ -643,7 +666,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      *
      * @param originPoint
      */
-    private void setOriginPointMarkerSsource(Point originPoint) {
+    private void setOriginPointMarkerSource(Point originPoint) {
         GeoJsonSource originSource = Objects.requireNonNull(mapboxMap.getStyle()).getSourceAs("origin-source-id");
         if (originSource != null && !originPoint.equals(getCurrentLocation())) {
             originSource.setGeoJson(Feature.fromGeometry(originPoint));
@@ -683,7 +706,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private void renderRouteOnMap(Point originPoint, Point destination) {
 
         setDestinationMarkerSource(destination);
-        setOriginPointMarkerSsource(originPoint);
+        setOriginPointMarkerSource(originPoint);
         selectedRouteNo = NO_ROUTE_SELECTED;
         removeLayersAndResource();
         getRouteFromMapbox(originPoint, destination);
@@ -733,7 +756,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
 
-        if (safetyLevelsListOfRoutes != null){
+        if (safetyLevelsListOfRoutes != null) {
             List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
             Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
             for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
@@ -742,7 +765,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
                 double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
 
-                if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1){
+                if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1) {
                     Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
                     double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
                     double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
