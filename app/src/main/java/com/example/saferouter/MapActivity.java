@@ -37,6 +37,7 @@ import com.example.saferouter.model.RouteInfoItem;
 import com.example.saferouter.network.RoutingAlgorithmApiInterface;
 import com.example.saferouter.network.SafetyLevelApiInterface;
 import com.example.saferouter.utils.Utils;
+import com.google.gson.JsonObject;
 import com.mancj.materialsearchbar.MaterialSearchBar;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
@@ -154,6 +155,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private Point destinationPoint;
     //private LatLngBounds latLngBoundsMelbourne;
     private LocationEngine locationEngine;
+    private CarmenFeature currentLocationCarmenFeature;
     // Variables needed to listen to location updates
     private MainActivityLocationCallback locationCallback = new MainActivityLocationCallback(this);
     private List<Feature> greenFeatureList = new ArrayList<>();
@@ -214,17 +216,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 addDestinationIconSymbolLayer(style);
                 addOriginIconSymbolLayer(style);
 
-                /*latLngBoundsMelbourne = new LatLngBounds.Builder()
-                        .include(new LatLng(-38.2250, 145.5498))
-                        .include(new LatLng(-37.5401, 144.5532))
-                        .build();*/
-
                 mapboxMap.addOnMapClickListener(MapActivity.this);
                 //Limit the camera inside the latitude and longitude bounds of Greater Melbourne.
                 mapboxMap.setLatLngBoundsForCameraTarget(BBOX_MELBOURNE);
 
                 initRecyclerView();
                 initSource(style);
+
+                addUserCurrentLocationInSearchList();
             }
         });
 
@@ -332,12 +331,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
-        if (selectedRouteNo != NO_ROUTE_SELECTED) {
-            goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+        // If user does not select a route
+        if (selectedRouteNo == NO_ROUTE_SELECTED) {
+            goToMapButton.setVisibility(View.GONE);
+            startNavigationButton.setVisibility(View.GONE);
         } else {
-            goToMapButton.setVisibility(show ? View.GONE : View.VISIBLE);
+            goToMapButton.setVisibility(show ? View.VISIBLE : View.GONE);
+            startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
         }
-        startNavigationButton.setVisibility(show ? View.GONE : View.VISIBLE);
         if (show){
             findViewById(R.id.about_page_fab).setVisibility(View.GONE);
             findViewById(R.id.recenter_location_fab).setVisibility(View.GONE);
@@ -539,6 +540,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         .limit(AUTO_COMPLETE_LIST_LIMIT)
                         .country(PLACE_SEARCH_COUNTRY)
                         .bbox(144.5532, -38.2250, 145.5498, -37.5401)
+                        //.addInjectedFeature(currentLocationCarmenFeature)
                         .build(PlaceOptions.MODE_CARDS))
                 .build(MapActivity.this);
         startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE);
@@ -613,6 +615,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             }
         }
+    }
+
+
+    private void addUserCurrentLocationInSearchList(){
+        currentLocationCarmenFeature = CarmenFeature.builder().text("Your Current Location")
+                .geometry(getCurrentLocation())
+                .id(getCurrentLocation().toString())
+                .properties(new JsonObject())
+                .build();
     }
 
     /**
