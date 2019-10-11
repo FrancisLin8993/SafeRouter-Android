@@ -120,6 +120,7 @@ import org.apache.commons.lang3.StringUtils;
  * Activity of the Mapbox related features.
  */
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, MapboxMap.OnMapClickListener, PermissionsListener {
+    public static final int HISTORY_SEARCH_PLACE_COUNT = 5;
     // variables for adding location layer
     private MapView mapView;
     private MapboxMap mapboxMap;
@@ -365,7 +366,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             double duration = currentRouteList.get(i).duration();
             BigDecimal durationInBigDecimal = new BigDecimal(duration);
             durationInBigDecimal = durationInBigDecimal.divide(new BigDecimal("60"), 0, RoundingMode.HALF_UP);
-            String durationInString = String.valueOf(durationInBigDecimal) + " mins";
+            String durationInString = (durationInBigDecimal) + " mins";
             item.setDuration(durationInString);
 
             double distance = currentRouteList.get(i).distance();
@@ -461,7 +462,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-
+    /**
+     * Reset the map to its original state when the app launches
+     */
     public void resetMap() {
         showRouteList(false);
         removeLayersAndResource();
@@ -547,12 +550,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      */
     private void redirectToSearchScreen() {
         Intent intent;
+        // Only show the "Your current location" entry in the search list
+        // when user clicking the origin search bar
         if (clickedSearchBarId == R.id.destination_search_bar) {
             intent = new PlaceAutocomplete.IntentBuilder()
                     .accessToken(Mapbox.getAccessToken())
                     .placeOptions(PlaceOptions.builder()
                             .backgroundColor(Color.WHITE)
                             .limit(AUTO_COMPLETE_LIST_LIMIT)
+                            .historyCount(HISTORY_SEARCH_PLACE_COUNT)
+                            .hint("Search for destination")
                             .country(PLACE_SEARCH_COUNTRY)
                             .bbox(144.5532, -38.2250, 145.5498, -37.5401)
                             .build(PlaceOptions.MODE_CARDS))
@@ -564,6 +571,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     .placeOptions(PlaceOptions.builder()
                             .backgroundColor(Color.WHITE)
                             .limit(AUTO_COMPLETE_LIST_LIMIT)
+                            .historyCount(HISTORY_SEARCH_PLACE_COUNT)
+                            .hint("Search for starting point")
                             .country(PLACE_SEARCH_COUNTRY)
                             .bbox(144.5532, -38.2250, 145.5498, -37.5401)
                             .addInjectedFeature(currentLocationCarmenFeature)
