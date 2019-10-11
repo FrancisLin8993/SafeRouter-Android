@@ -320,6 +320,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         routeInfoRecyclerView.setClickable(!show);
         startNavigationButton.setEnabled(!show);
         goToMapButton.setEnabled(!show);
+        aboutPageButton.setEnabled(!show);
+        recenterLocationButton.setEnabled(!show);
     }
 
     /**
