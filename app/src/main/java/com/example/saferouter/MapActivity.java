@@ -461,27 +461,24 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     }
 
 
-    /*@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    @OnClick(R.id.button_clear)
-    public void clearAllButtonOnClick() {
+
+    public void resetMap() {
+        showRouteList(false);
         removeLayersAndResource();
+        removeAllCurrentRouteInfo();
         originSearchBar.setPlaceHolder(getString(R.string.origin_init_holder));
         destinationSearchBar.setPlaceHolder(getString(R.string.destination_init_holder));
         originPoint = getCurrentLocation();
         LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
-        CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).build();
+        viewAlternativesButton.setVisibility(View.GONE);
+        CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).zoom(14).build();
         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
         destinationPoint = null;
         hideMarker("origin-symbol-layer-id");
         hideMarker("destination-symbol-layer-id");
-        startNavigationButton.setEnabled(false);
-        //startNavigationButton.setBackgroundResource(R.color.mapboxGrayLight);
-        startNavigationButton.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.mapboxGrayLight)));
+    }
 
-        viewAlternativesButton.setVisibility(View.GONE);
-        //clearAllButton.setVisibility(View.GONE);
-        removeAllCurrentRouteInfo();
-    }*/
+
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.button_view_alternatives)
     public void goToListButtonOnClick() {
@@ -526,9 +523,23 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             routeInfoItemList.clear();
         }
 
+        if (safetyLevelsListOfRoutes != null) {
+            safetyLevelsListOfRoutes.clear();
+        }
+
         if (routeSafetyScoreStringList != null) {
             routeSafetyScoreStringList.clear();
         }
+
+        if (navigationRatingsListOfRoutes != null) {
+            navigationRatingsListOfRoutes.clear();
+        }
+
+        if (voiceMessagesListOfRoutes != null) {
+            voiceMessagesListOfRoutes.clear();
+        }
+
+        selectedRouteNo = NO_ROUTE_SELECTED;
     }
 
     /**
@@ -1323,8 +1334,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void onBackPressed() {
         if (mapView.getVisibility() == View.VISIBLE) {
             finishAffinity();
-        } else {
+        } else if (selectedRouteNo != NO_ROUTE_SELECTED){
             showRouteList(false);
+        } else {
+            resetMap();
         }
     }
 
