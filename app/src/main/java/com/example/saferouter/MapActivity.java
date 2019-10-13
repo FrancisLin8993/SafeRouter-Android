@@ -330,7 +330,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
      *
      * @param show
      */
-    /*private void showRouteList(boolean show) {
+    private void showRouteList(boolean show) {
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
@@ -350,10 +350,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             findViewById(R.id.recenter_location_fab).setVisibility(View.VISIBLE);
         }
 
-    }*/
+    }
 
     //If no simulation of navigation, use this version
-    private void showRouteList(boolean show) {
+    /*private void showRouteList(boolean show) {
         mapView.setVisibility(show ? View.GONE : View.VISIBLE);
         routeInfoRecyclerView.setVisibility(show ? View.VISIBLE : View.GONE);
         viewAlternativesButton.setVisibility(show ? View.GONE : View.VISIBLE);
@@ -373,7 +373,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             findViewById(R.id.recenter_location_fab).setVisibility(View.VISIBLE);
         }
 
-    }
+    }*/
 
 
     /**
@@ -801,25 +801,29 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public boolean onMapClick(@NonNull LatLng point) {
 
-        if (safetyLevelsListOfRoutes != null) {
+        if (safetyLevelsListOfRoutes != null & selectedRouteNo != NO_ROUTE_SELECTED) {
             List<Integer> dangerousPointIndexList = getDangerousPointIndexFromCurrentRoute(safetyLevelsListOfRoutes.get(selectedRouteNo));
-            Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
-            for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
-                int dangerousPointIndex = dangerousPointIndexList.get(i);
-                Point dangerousPoint = pointsOfCurrentRoute.get(dangerousPointIndex);
+            if (dangerousPointIndexList != null) {
+                Point clickedPoint = Point.fromLngLat(point.getLongitude(), point.getLatitude());
+                for (int i = 0; i <= dangerousPointIndexList.size() - 1; i++) {
+                    int dangerousPointIndex = dangerousPointIndexList.get(i);
+                    Point dangerousPoint = pointsOfCurrentRoute.get(dangerousPointIndex);
 
-                double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
+                    double distanceBetweenClickedAndDangerousPoint = calculateDistanceBetweenTwoPoint(clickedPoint, dangerousPoint);
 
-                if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1) {
-                    Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
-                    double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
-                    double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
-                    if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
-                        String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
-                        Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+                    if (dangerousPointIndex != pointsOfCurrentRoute.size() - 1) {
+                        Point nextPoint = pointsOfCurrentRoute.get(dangerousPointIndex + 1);
+                        double distanceBetweenClickedAndNextPoint = calculateDistanceBetweenTwoPoint(clickedPoint, nextPoint);
+                        double distanceBetweenTwoConsecutivePoints = calculateDistanceBetweenTwoPoint(dangerousPoint, nextPoint);
+                        if (distanceBetweenClickedAndDangerousPoint + distanceBetweenClickedAndNextPoint - distanceBetweenTwoConsecutivePoints < 50) {
+                            String message = voiceMessagesListOfRoutes.get(selectedRouteNo).get(dangerousPointIndex);
+                            Toast.makeText(MapActivity.this, message, Toast.LENGTH_LONG).show();
+                        }
                     }
                 }
+
             }
+
         }
         return true;
     }
@@ -1366,7 +1370,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void onBackPressed() {
         if (mapView.getVisibility() == View.VISIBLE) {
             finishAffinity();
-        } else if (selectedRouteNo != NO_ROUTE_SELECTED){
+        } else if (selectedRouteNo != NO_ROUTE_SELECTED) {
             showRouteList(false);
         } else {
             resetMap();

@@ -114,7 +114,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
         modifyRouteCongestionInfo();
         addAllMilestone();
         initializeSpeechPlayer();
-        initLocationEngine();
+        //initLocationEngine();
         CameraPosition initialPosition = new CameraPosition.Builder()
                 .target(new LatLng(originPoint.latitude(), destination.longitude()))
                 .zoom(INITIAL_ZOOM)
@@ -200,7 +200,7 @@ public class MapNavigationActivity extends AppCompatActivity implements OnNaviga
                 NavigationViewOptions.builder()
                         .navigationListener(this)
                         .directionsRoute(directionsRoute)
-                        .shouldSimulateRoute(false)
+                        .shouldSimulateRoute(true)
                         .progressChangeListener(this)
                         .instructionListListener(this)
                         .speechAnnouncementListener(this)
