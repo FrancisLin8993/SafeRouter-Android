@@ -645,9 +645,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 if (originPoint == null)
                     originPoint = getCurrentLocation();
 
-                if (destinationPoint.equals(originPoint))
-                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
-                else {
+                if (destinationPoint.equals(originPoint)) {
+                    resetMap();
+                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same. Please type other locations.", Toast.LENGTH_LONG).show();
+                } else {
                     renderRouteOnMap(originPoint, destinationPoint);
                     routeInfoRecyclerView.setVisibility(View.GONE);
                     showProgress(true);
@@ -669,8 +670,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     originSearchBar.setPlaceHolder(selectedLocationCarmenFeature.placeName());
                 }
 
-                if (destinationPoint != null && destinationPoint.equals(originPoint))
-                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same.", Toast.LENGTH_LONG).show();
+                if (destinationPoint != null && destinationPoint.equals(originPoint)){
+                    resetMap();
+                    Toast.makeText(MapActivity.this, "The destination and the starting point are the same. Please type other locations.", Toast.LENGTH_LONG).show();
+                }
                 else {
                     if (!originPoint.equals(getCurrentLocation()))
                         showMarker("origin-symbol-layer-id");
