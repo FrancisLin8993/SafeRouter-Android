@@ -498,6 +498,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         originPoint = getCurrentLocation();
         LatLng originLatLng = new LatLng(originPoint.latitude(), originPoint.longitude());
         viewAlternativesButton.setVisibility(View.GONE);
+        startNavigationButton.setVisibility(View.GONE);
         CameraPosition newCameraPosition = new CameraPosition.Builder().target(originLatLng).zoom(14).build();
         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(newCameraPosition));
         destinationPoint = null;
